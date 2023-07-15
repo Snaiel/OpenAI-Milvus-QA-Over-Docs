@@ -1,4 +1,4 @@
-<h2 class="text-center">Sources</h2>
+<h2 class="text-center mb-3">Sources</h2>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -11,9 +11,11 @@
 {% endwith %}
 
 {% if not collection_exists %}
-<a href="/create_collection" class="btn btn-primary mt-2">Create Collection</a>
+<a href="/create_collection" class="btn btn-primary">Create Collection</a>
 {% endif %}
 
+{% include 'add_sources.html' %}
+
 {% if collection_exists %}
-<a href="/delete_collection" class="btn btn-outline-secondary mt-2">Delete Collection</a>
+<a href="/delete_collection" class="btn btn-outline-secondary">Delete Collection</a>
 {% endif %}

@@ -1,14 +1,16 @@
-from flask import Flask, render_template, request, redirect, flash
-from time import sleep
+from flask import Flask, render_template, request, redirect, flash, url_for
 from flask_socketio import SocketIO
 from threading import Thread
-from time import time
-import os
+from time import time, sleep
+from werkzeug.utils import secure_filename
+import os, json
 
 from api import retrieve_response
 import db
 
-CURRENT_SOURCES_FILE = "data/current_sources.json"
+UPLOAD_FOLDER = 'uploads/'
+ALLOWED_EXTENSIONS = {'pdf', 'csv'}
+CONTEXT_FILE = "context.json"
 
 class Message():
     def __init__(self, message: str, type: str) -> None:
@@ -19,19 +21,32 @@ class Message():
         return self.message
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'a super secret key'
 app.debug = True
 socketio = SocketIO(app)
 
-context = {
-    "chat_items": [],
-    "waiting": False,
-    "response_time": None,
-    "collection_exists": False
-}
+if os.path.exists(CONTEXT_FILE):
+    with open(CONTEXT_FILE) as file:
+        context = json.load(file)
+else:
+    context = {
+        "chat_items": [],
+        "waiting": False,
+        "response_time": None,
+        "collection_exists": False,
+        "sources_to_add": []
+    }
+
+def save_context():
+    with open(CONTEXT_FILE, 'w' if os.path.exists(CONTEXT_FILE) else 'x') as file:
+        saved_context = context.copy()
+        saved_context["sources_to_add"] = []
+        json.dump(context, file, indent=4)
 
 @app.route("/", methods=['GET', 'POST'])
 def home():
+    save_context()
     if request.method == 'POST':
         context["response_time"] = None
         user_input = request.form['user_input']
@@ -49,11 +64,29 @@ def create_collection():
     flash("Collection successfully created", "success")
     return redirect("/")
 
+def allowed_file(filename):
+    return '.' in filename and \
+            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/include_source", methods=['GET', 'POST'])
+def include_source():
+    if request.method == 'POST':
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an
+        # empty file without a filename.
+        if file.filename == '':
+            context["sources_to_add"].append(request.form["include-url"])
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            context["sources_to_add"].append(filename)
+    return redirect("/")
+
 @app.route("/delete_collection")
 def delete_collection():
     db.delete_collection()
-    if os.path.exists(CURRENT_SOURCES_FILE):
-        os.remove(CURRENT_SOURCES_FILE)
+    if os.path.exists(CONTEXT_FILE):
+        os.remove(CONTEXT_FILE)
     context["collection_exists"] = False
     flash("Collection successfully deleted", "primary")
     return redirect("/")

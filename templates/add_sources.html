@@ -1,0 +1,27 @@
+{% if collection_exists %}
+<div class="d-flex flex-column mb-5">
+    <h4>Add Sources</h4>
+    <form action="/include_source" method="post" enctype="multipart/form-data" class="d-flex flex-column">
+        <input class="form-control" type="file" id="include-file" name="file">
+        <div class="text-center mt-1 mb-1">or</div>
+        <input type="website" class="form-control" id="include-url" name="include-url" placeholder="Website URL" autocomplete="off">
+        <button type="submit" class="btn btn-primary mt-3" id="include-source" disabled>Include Source</button>
+    </form>
+
+    <div id="input-sources-list" class="mt-3">
+        <ul>
+            {% for source in sources_to_add %}
+                <li>
+                    {{ source }}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% if sources_to_add %}
+        <a class="btn btn-secondary mt-3" href="/add_sources">Submit Sources</a>
+    {% else %}
+        <a class="btn btn-secondary mt-3 disabled" href="/add_sources">Submit Sources</a>
+    {% endif %}
+</div>
+{% endif %}
