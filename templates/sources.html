@@ -1,1 +1,19 @@
 <h2 class="text-center">Sources</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div>
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+{% if not collection_exists %}
+<a href="/create_collection" class="btn btn-primary mt-2">Create Collection</a>
+{% endif %}
+
+{% if collection_exists %}
+<a href="/delete_collection" class="btn btn-outline-secondary mt-2">Delete Collection</a>
+{% endif %}
