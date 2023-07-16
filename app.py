@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 from threading import Thread
 from time import time, sleep
 from werkzeug.utils import secure_filename
-import os, json, shutil
+import os, json, shutil, validators
 
 from api import retrieve_response
 import db
@@ -39,7 +39,8 @@ else:
         "response_time": None,
         "collection_exists": False,
         "sources_to_add": [],
-        "sources": []
+        "sources": [],
+        "processing_sources": False
     }
 
 def save_context():
@@ -80,8 +81,11 @@ def include_source():
             context["sources_to_add"].append(request.form["include-url"])
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(path)
+
             context["sources_to_add"].append(filename)
+
     return redirect("/")
 
 @app.route("/clear_sources_to_add")
@@ -89,6 +93,27 @@ def clear_sources_to_add():
     context["sources_to_add"] = []
     shutil.rmtree(UPLOAD_FOLDER)
     os.mkdir(UPLOAD_FOLDER)
+    return redirect("/")
+
+@app.route("/add_sources", methods=['GET', 'POST'])
+def add_sources():
+    if request.method == 'POST':
+        if context["sources_to_add"]:
+            valid_sources = []
+            
+            for source in context["sources_to_add"]:
+                if validators.url(source) or os.path.exists(os.path.join(UPLOAD_FOLDER, source)):
+                    valid_sources.append(source)
+            
+            if valid_sources:
+                db.add_sources(valid_sources)
+                context["sources"].append(valid_sources)
+                clear_sources_to_add()
+                flash("Successfully added sources", "success")
+            else:
+                flash("No valid sources provided", "warning")
+        else:
+            flash("No sources to add", "warning")
     return redirect("/")
 
 @app.route("/delete_collection")

@@ -1,10 +1,11 @@
-from langchain.document_loaders import WebBaseLoader
+from langchain.document_loaders import WebBaseLoader, CSVLoader, PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.docstore.document import Document
 from langchain.vectorstores.milvus import Milvus
 from langchain.embeddings.openai import OpenAIEmbeddings
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, connections, utility
 from typing import Dict, List, Tuple
-import textwrap
+import validators, os
 
 DOCUMENTS_STORE_NAME = "OpenAI_QA_Over_Docs_Sources"
 
@@ -14,6 +15,7 @@ connections.connect()
 
 def collection_exists():
     return utility.has_collection(DOCUMENTS_STORE_NAME)
+
 
 def create_collection():
     if utility.has_collection(DOCUMENTS_STORE_NAME):
@@ -57,18 +59,50 @@ def create_collection():
     global vector_store
     vector_store = Milvus(embeddings, DOCUMENTS_STORE_NAME)
 
+
 def add_sources(sources: list[str]):
     print(f"Adding sources to {DOCUMENTS_STORE_NAME} collection")
-    loader = WebBaseLoader(web_path=sources)
-    docs = loader.load()
 
-    for doc in docs:
-        doc.metadata = {'metadata': doc.metadata}
+    loaders = []
 
-    text_splitter = RecursiveCharacterTextSplitter()
+    for source in sources:
+        if validators.url(source):
+            loaders.append(WebBaseLoader(source))
+        elif os.path.exists(os.path.join("uploads/", source)):
+            path = os.path.join("uploads/", source)
+            _, ext = os.path.splitext(source)
+            ext = ext.lower()
+            if ext == ".csv":
+                with open(path, 'r+') as csv_file:
+                    csv_content = csv_file.read()
+                    csv_file.seek(0)
+                    csv_file.truncate()
+                    csv_file.write(csv_content.strip())
+                loaders.append(CSVLoader(path))
+            elif ext == ".pdf":
+                loaders.append(PyMuPDFLoader(path))
 
-    docs = text_splitter.split_documents(docs)
-    vector_store.add_documents(docs)
+    def put_metadata_into_sub_dict(docs: list[Document]) -> list[Document]:
+        for doc in docs:
+            doc.metadata = {
+                'metadata': doc.metadata
+            }
+        return docs
+    
+    print(loaders)
+
+    if loaders:
+        docs = []
+        for loader in loaders:
+            new_docs = loader.load()
+            new_docs = put_metadata_into_sub_dict(new_docs)
+            docs.extend(new_docs)
+
+        text_splitter = RecursiveCharacterTextSplitter()
+        documents = text_splitter.split_documents(docs)
+        vector_store.add_documents(documents)
+        print(f"Successfully added sources to {DOCUMENTS_STORE_NAME} collection")
+
 
 def delete_collection():
     if utility.has_collection(DOCUMENTS_STORE_NAME):
@@ -76,7 +110,7 @@ def delete_collection():
         collection = Collection(DOCUMENTS_STORE_NAME)
         collection.drop()
 
-# create_collection()
+
 
 print("retrieving HuggingFace embeddings")
 embeddings = OpenAIEmbeddings()

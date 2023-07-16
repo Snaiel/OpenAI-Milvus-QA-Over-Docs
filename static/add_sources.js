@@ -15,3 +15,11 @@ function toggleIncludeSourceButton() {
         includeSourceButton.disabled = false;
     }
 }
+
+// // Show the modal when the page has finished loading
+// document.addEventListener('DOMContentLoaded', function() {
+//     var myModal = new bootstrap.Modal(document.getElementById('please-wait-modal'));
+//     if (myModal != null) {
+//         myModal.show();
+//     }
+//   });

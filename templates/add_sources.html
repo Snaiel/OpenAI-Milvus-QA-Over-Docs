@@ -9,6 +9,11 @@
     </form>
 
     <h4 class="mt-3">Sources to Add</h4>
+
+    {% if not sources_to_add %}
+    <div class="text-secondary">Add a file or website above</div>
+    {% endif %}
+
     <div id="input-sources-list">
         <ul>
             {% for source in sources_to_add %}
@@ -24,9 +29,24 @@
     {% endif %}
 
     {% if sources_to_add %}
-        <a class="btn btn-primary mt-3 mb-5" href="/add_sources">Submit Sources</a>
+        <form action="/add_sources" method="post" class="d-flex flex-column">
+            <input type="submit" value="Submit Sources" class="btn btn-primary mt-3 mb-5" data-bs-toggle="modal" data-bs-target="#please-wait-modal">
+        </form>
     {% else %}
-        <a class="btn btn-primary mt-3 mb-5 disabled" href="/add_sources">Submit Sources</a>
+        <a class="btn btn-primary mt-3 mb-5 disabled">Submit Sources</a>
     {% endif %}
+
+    <div class="modal fade" id="please-wait-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5">Submitting Sources...</h1>
+            </div>
+            <div class="modal-body">
+                Please wait while the sources are being processed.
+            </div>
+        </div>
+        </div>
+    </div>
 </div>
 {% endif %}
