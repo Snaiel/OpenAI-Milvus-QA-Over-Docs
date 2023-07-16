@@ -107,7 +107,7 @@ def add_sources():
             
             if valid_sources:
                 db.add_sources(valid_sources)
-                context["sources"].append(valid_sources)
+                context["sources"].extend(valid_sources)
                 clear_sources_to_add()
                 flash("Successfully added sources", "success")
             else:

@@ -10,6 +10,23 @@
     {% endif %}
 {% endwith %}
 
+<div class="mb-3">
+    <h4>Current Sources</h4>
+    {% if not sources %}
+    <div class="text-secondary">
+        Add sources below
+    </div>
+    {% else %}
+    <ul>
+        {% for source in sources %}
+        <li>
+            {{ source }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+
 {% if not collection_exists %}
 <a href="/create_collection" class="btn btn-primary">Create Collection</a>
 {% endif %}
