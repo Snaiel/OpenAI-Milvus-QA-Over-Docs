@@ -9,10 +9,12 @@ import os, json, shutil, validators
 from api import retrieve_response
 import db
 
+
 UPLOAD_FOLDER = 'uploads/'
 ALLOWED_EXTENSIONS = {'pdf', 'csv'}
 CONTEXT_FILE = "context.json"
 SOURCES_FILE = "sources.txt"
+
 
 class Message():
     def __init__(self, message: str, type: str) -> None:
@@ -31,6 +33,7 @@ app.config['SECRET_KEY'] = 'a super secret key'
 app.debug = True
 socketio = SocketIO(app)
 
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.mkdir(UPLOAD_FOLDER)
 
@@ -40,7 +43,8 @@ if os.path.exists(CONTEXT_FILE):
 
         if os.path.exists(SOURCES_FILE):
             with open(SOURCES_FILE) as sources_file:
-                context["sources"] = sources_file.readlines()
+                # print(list(map(lambda e: e.strip(), sources_file.readlines())))
+                context["sources"] = list(map(lambda e: e.strip(), sources_file.readlines()))
 else:
     context = {
         "chat_items": [],
@@ -52,6 +56,7 @@ else:
         "processing_sources": False
     }
 
+
 def save_context():
     with open(CONTEXT_FILE, 'w' if os.path.exists(CONTEXT_FILE) else 'x') as file:
         new_context = context.copy()
@@ -59,7 +64,8 @@ def save_context():
         new_context["response_time"] = None
         json.dump(new_context, file, indent=4)
     with open(SOURCES_FILE, 'w' if os.path.exists(SOURCES_FILE) else 'x') as file:
-        file.writelines(list(map(lambda e: e + "\n", context["sources"])))
+        file.write("\n".join(context["sources"]))
+
 
 @app.route("/", methods=['GET', 'POST'])
 def home():
@@ -77,6 +83,7 @@ def home():
 
     return render_template("index.html", **context)
 
+
 @app.route('/create_collection')
 def create_collection():
     if not db.collection_exists():
@@ -85,9 +92,11 @@ def create_collection():
     flash("Collection successfully created", "success")
     return redirect("/")
 
+
 def allowed_file(filename):
     return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @app.route("/include_source", methods=['GET', 'POST'])
 def include_source():
@@ -106,12 +115,14 @@ def include_source():
 
     return redirect("/")
 
+
 @app.route("/clear_sources_to_add")
 def clear_sources_to_add():
     context["sources_to_add"] = []
     shutil.rmtree(UPLOAD_FOLDER)
     os.mkdir(UPLOAD_FOLDER)
     return redirect("/")
+
 
 @app.route("/add_sources", methods=['GET', 'POST'])
 def add_sources():
@@ -133,6 +144,16 @@ def add_sources():
             flash("No sources to add", "warning")
     return redirect("/")
 
+
+@app.route("/remove_source/<int:index>")
+def remove_source(index: int):
+    source = context["sources"][index]
+    db.remove_source(source)
+    flash(f"Successfully removed {source}", "primary")
+    context["sources"].pop(index)
+    return redirect("/")
+
+
 @app.route("/delete_collection")
 def delete_collection():
     db.delete_collection()
@@ -141,6 +162,7 @@ def delete_collection():
     context["collection_exists"] = False
     flash("Collection successfully deleted", "primary")
     return redirect("/")
+
 
 def response(user_input: str):
     st = time()
@@ -162,6 +184,7 @@ def response(user_input: str):
 
     context["response_time"] = response_time
     socketio.emit('response_received')
+
 
 if __name__ == '__main__':
     socketio.run(app)

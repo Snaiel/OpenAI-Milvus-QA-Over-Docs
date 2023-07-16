@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple
 import validators, os
 
 DOCUMENTS_STORE_NAME = "OpenAI_QA_Over_Docs_Sources"
+UPLOAD_FOLDER = 'uploads/'
 
 vector_store: Milvus
 
@@ -68,8 +69,8 @@ def add_sources(sources: list[str]):
     for source in sources:
         if validators.url(source):
             loaders.append(WebBaseLoader(source))
-        elif os.path.exists(os.path.join("uploads/", source)):
-            path = os.path.join("uploads/", source)
+        elif os.path.exists(os.path.join(UPLOAD_FOLDER, source)):
+            path = os.path.join(UPLOAD_FOLDER, source)
             _, ext = os.path.splitext(source)
             ext = ext.lower()
             if ext == ".csv":
@@ -127,6 +128,25 @@ def retrieve_relevant_docs(query: str) -> list[dict]:
     relevant_docs = sorted(relevant_docs, key=lambda d: order_dict.get(d['pk'], float('inf')))
 
     return relevant_docs
+
+
+def remove_source(source: str):
+    if not collection_exists():
+        return
+    
+    collection = Collection(DOCUMENTS_STORE_NAME)
+
+    path = os.path.join(UPLOAD_FOLDER, source)
+    
+    relevant_docs = collection.query(
+        expr = f"metadata['source'] LIKE '{path}'", 
+        output_fields = ["pk"]
+    )
+
+    relevant_docs = list(map(lambda e: e["pk"], relevant_docs))
+
+    for pk in relevant_docs:
+        collection.delete(f"pk in [{pk}]")
 
 
 def delete_collection():
