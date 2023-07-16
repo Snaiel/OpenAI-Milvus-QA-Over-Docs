@@ -1,4 +1,4 @@
-# OpenAI-QA-Over-Docs
+# OpenAI-Milvus-QA-Over-Docs
 
 Uses [Milvus](https://milvus.io/) as a document store and [OpenAI's](https://platform.openai.com/docs/models/gpt-3-5) chat API for a simple app that allows the user ask question based on given sources.
 
