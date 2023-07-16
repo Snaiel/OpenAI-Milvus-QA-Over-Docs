@@ -38,7 +38,8 @@ else:
         "waiting": False,
         "response_time": None,
         "collection_exists": False,
-        "sources_to_add": []
+        "sources_to_add": [],
+        "sources": []
     }
 
 def save_context():
