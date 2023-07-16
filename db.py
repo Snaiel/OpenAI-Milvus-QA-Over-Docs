@@ -3,7 +3,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 from langchain.vectorstores.milvus import Milvus
 from langchain.embeddings.openai import OpenAIEmbeddings
-from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, connections, utility
+from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
 from typing import Dict, List, Tuple
 import validators, os
 
@@ -102,6 +102,31 @@ def add_sources(sources: list[str]):
         documents = text_splitter.split_documents(docs)
         vector_store.add_documents(documents)
         print(f"Successfully added sources to {DOCUMENTS_STORE_NAME} collection")
+
+
+def retrieve_relevant_docs(query: str) -> list[dict]:
+    embedded_query = embeddings.embed_query(query)
+    collection = Collection(DOCUMENTS_STORE_NAME)
+
+    search_param = {
+        "metric_type": "L2",  # Similarity metric to use, e.g., "L2" or "IP"
+        "params": {"nprobe": 16}  # Extra search parameters, e.g., number of probes
+    }
+    results = collection.search(data=[embedded_query], anns_field="vector", limit=20, param=search_param)
+    results = results[0]
+
+    relevant_docs = collection.query(
+        expr = f"pk in {results.ids}", 
+        output_fields = ["text"]
+    )
+
+    # Create a dictionary to map pk values to their respective order index
+    order_dict = {pk: i for i, pk in enumerate(results.ids)}
+
+    # Sort the data list based on the order index of each pk value
+    relevant_docs = sorted(relevant_docs, key=lambda d: order_dict.get(d['pk'], float('inf')))
+
+    return relevant_docs
 
 
 def delete_collection():

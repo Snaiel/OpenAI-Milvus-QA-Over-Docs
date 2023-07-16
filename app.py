@@ -3,6 +3,7 @@ from flask_socketio import SocketIO
 from threading import Thread
 from time import time, sleep
 from werkzeug.utils import secure_filename
+from pprint import pprint
 import os, json, shutil, validators
 
 from api import retrieve_response
@@ -45,7 +46,10 @@ else:
 
 def save_context():
     with open(CONTEXT_FILE, 'w' if os.path.exists(CONTEXT_FILE) else 'x') as file:
-        json.dump(context, file, indent=4)
+        new_context = context.copy()
+        new_context["chat_items"] = []
+        new_context["response_time"] = None
+        json.dump(new_context, file, indent=4)
 
 @app.route("/", methods=['GET', 'POST'])
 def home():
@@ -53,10 +57,14 @@ def home():
     if request.method == 'POST':
         context["response_time"] = None
         user_input = request.form['user_input']
+
         context["chat_items"].append(Message(user_input, "user"))
+
         thread = Thread(target=response, args=(user_input,))
         thread.start()
+
         context["waiting"] = True
+
     return render_template("index.html", **context)
 
 @app.route('/create_collection')
@@ -104,7 +112,6 @@ def add_sources():
             for source in context["sources_to_add"]:
                 if validators.url(source) or os.path.exists(os.path.join(UPLOAD_FOLDER, source)):
                     valid_sources.append(source)
-            
             if valid_sources:
                 db.add_sources(valid_sources)
                 context["sources"].extend(valid_sources)
@@ -129,7 +136,14 @@ def response(user_input: str):
     st = time()
     sleep(0.1)
 
-    context["chat_items"].append(Message(retrieve_response(user_input), "response"))
+    relevant_docs = db.retrieve_relevant_docs(user_input)
+    pprint(relevant_docs)
+
+    response = retrieve_response(user_input, relevant_docs)
+
+    print(response)
+
+    context["chat_items"].append(Message(response, "response"))
 
     context["waiting"] = False
 

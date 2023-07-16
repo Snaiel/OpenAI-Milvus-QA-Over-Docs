@@ -10,6 +10,7 @@
     {% endif %}
 {% endwith %}
 
+{% if collection_exists %}
 <div class="mb-3">
     <h4>Current Sources</h4>
     {% if not sources %}
@@ -26,6 +27,7 @@
     </ul>
     {% endif %}
 </div>
+{% endif %}
 
 {% if not collection_exists %}
 <a href="/create_collection" class="btn btn-primary">Create Collection</a>
