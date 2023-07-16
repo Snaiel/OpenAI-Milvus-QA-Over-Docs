@@ -29,7 +29,7 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> str:
         new_context = context
         new_context += "\n\n\n" + doc["text"]
 
-        if num_tokens_from_string(new_context) > max_token_length:
+        if num_tokens_from_string(new_context) > max_token_length - base_token_length:
             break
 
         context = new_context
