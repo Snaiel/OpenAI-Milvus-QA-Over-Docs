@@ -2,4 +2,5 @@ flask
 flask_socketio
 langchain
 openai
+pymilvus
 python-dotenv
