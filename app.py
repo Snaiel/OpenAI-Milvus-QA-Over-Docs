@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 from threading import Thread
 from time import time, sleep
 from werkzeug.utils import secure_filename
-import os, json
+import os, json, shutil
 
 from api import retrieve_response
 import db
@@ -26,6 +26,9 @@ app.config['SECRET_KEY'] = 'a super secret key'
 app.debug = True
 socketio = SocketIO(app)
 
+if not os.path.exists(UPLOAD_FOLDER):
+    os.mkdir(UPLOAD_FOLDER)
+
 if os.path.exists(CONTEXT_FILE):
     with open(CONTEXT_FILE) as file:
         context = json.load(file)
@@ -40,8 +43,6 @@ else:
 
 def save_context():
     with open(CONTEXT_FILE, 'w' if os.path.exists(CONTEXT_FILE) else 'x') as file:
-        saved_context = context.copy()
-        saved_context["sources_to_add"] = []
         json.dump(context, file, indent=4)
 
 @app.route("/", methods=['GET', 'POST'])
@@ -80,6 +81,13 @@ def include_source():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             context["sources_to_add"].append(filename)
+    return redirect("/")
+
+@app.route("/clear_sources_to_add")
+def clear_sources_to_add():
+    context["sources_to_add"] = []
+    shutil.rmtree(UPLOAD_FOLDER)
+    os.mkdir(UPLOAD_FOLDER)
     return redirect("/")
 
 @app.route("/delete_collection")
