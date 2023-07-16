@@ -20,6 +20,9 @@ class Message():
 
     def __str__(self) -> str:
         return self.message
+    
+    def lines(self) -> list[str]:
+        return self.message.splitlines()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -137,11 +140,8 @@ def response(user_input: str):
     sleep(0.1)
 
     relevant_docs = db.retrieve_relevant_docs(user_input)
-    pprint(relevant_docs)
 
     response = retrieve_response(user_input, relevant_docs)
-
-    print(response)
 
     context["chat_items"].append(Message(response, "response"))
 

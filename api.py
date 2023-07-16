@@ -41,7 +41,7 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> str:
         messages=messages
     )
 
-    return completion.choices[0].message.content
+    return completion.choices[0].message.content.strip()
 
 if __name__ == '__main__':
     retrieve_response("")

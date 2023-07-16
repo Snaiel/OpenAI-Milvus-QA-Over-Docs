@@ -7,7 +7,9 @@
     </div>
     {% elif item.type == "response" %}
     <div class="m-3 mt-0 p-3 bg-light-subtle rounded">
-    {{ item.message }}
+        {% for line in item.lines() %}
+            {{ line }} <br>
+        {% endfor %}
     </div>
     {% endif %}
 {% endfor %}
