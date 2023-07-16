@@ -17,9 +17,10 @@ SOURCES_FILE = "sources.txt"
 
 
 class Message():
-    def __init__(self, message: str, type: str) -> None:
+    def __init__(self, message: str, type: str, saved_question: int = None) -> None:
         self.message = message
         self.type = type
+        self.saved_question = saved_question
 
     def __str__(self) -> str:
         return self.message
@@ -160,7 +161,18 @@ def like_answer(index: int):
     question = context["chat_items"][index - 1]
     answer = context["chat_items"][index]
     db.add_question_answer(question.message, answer.message)
+    flash("Answer saved as a response", "success")
     return redirect("/")
+
+
+@app.route("/dislike_answer/<int:index>")
+def dislike_answer(index: int):
+    answer = context["chat_items"][index] # type: Message
+    if answer.saved_question:
+        db.remove_answer(answer.saved_question)
+        flash("Answer removed from saved responses", "primary")
+    return redirect("/")
+
 
 @app.route("/delete_collection")
 def delete_collection():
@@ -180,10 +192,10 @@ def response(user_input: str):
     sleep(0.1)
 
     relevant_qa = db.query_most_relevant_question(user_input)
-    print(relevant_qa)
+    pprint(relevant_qa)
 
-    if relevant_qa["distance"] < 0.35:
-        context["chat_items"].append(Message(relevant_qa["answer"], "response"))
+    if relevant_qa["distance"] < 0.4:
+        context["chat_items"].append(Message(relevant_qa["answer"], "response", relevant_qa["pk"]))
     else:
         relevant_docs = db.retrieve_relevant_docs(user_input)
         response = retrieve_response(user_input, relevant_docs)

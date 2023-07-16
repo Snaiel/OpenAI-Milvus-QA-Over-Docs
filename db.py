@@ -214,8 +214,20 @@ def query_most_relevant_question(query: str) -> dict:
 
         relevant_qa = relevant_qa[0]
         relevant_qa["distance"] = results.distances[0]
+        relevant_qa["pk"] = results.ids[0]
 
     return relevant_qa
+
+
+def remove_answer(pk: int):
+    collection = Collection(QUESTIONS_STORE_NAME)
+    relevant_qa = collection.query(
+        expr = f"pk in [{pk}]", 
+        output_fields = ["pk"]
+    )
+    pk = relevant_qa[0]["pk"]
+    collection.delete(f"pk in [{pk}]")
+
 
 def remove_source(source: str):
     if not collection_exists():
