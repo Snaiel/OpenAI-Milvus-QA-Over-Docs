@@ -62,6 +62,7 @@ def save_context():
         new_context = context.copy()
         new_context["chat_items"] = []
         new_context["response_time"] = None
+        new_context["waiting"] = False
         json.dump(new_context, file, indent=4)
     with open(SOURCES_FILE, 'w' if os.path.exists(SOURCES_FILE) else 'x') as file:
         file.write("\n".join(context["sources"]))
@@ -87,7 +88,7 @@ def home():
 @app.route('/create_collection')
 def create_collection():
     if not db.collection_exists():
-        db.create_collection()
+        db.create_collections()
     context["collection_exists"] = True
     flash("Collection successfully created", "success")
     return redirect("/")
@@ -154,6 +155,13 @@ def remove_source(index: int):
     return redirect("/")
 
 
+@app.route("/like_answer/<int:index>")
+def like_answer(index: int):
+    question = context["chat_items"][index - 1]
+    answer = context["chat_items"][index]
+    db.add_question_answer(question.message, answer.message)
+    return redirect("/")
+
 @app.route("/delete_collection")
 def delete_collection():
     db.delete_collection()
@@ -171,11 +179,15 @@ def response(user_input: str):
     st = time()
     sleep(0.1)
 
-    relevant_docs = db.retrieve_relevant_docs(user_input)
+    relevant_qa = db.query_most_relevant_question(user_input)
+    print(relevant_qa)
 
-    response = retrieve_response(user_input, relevant_docs)
-
-    context["chat_items"].append(Message(response, "response"))
+    if relevant_qa["distance"] < 0.35:
+        context["chat_items"].append(Message(relevant_qa["answer"], "response"))
+    else:
+        relevant_docs = db.retrieve_relevant_docs(user_input)
+        response = retrieve_response(user_input, relevant_docs)
+        context["chat_items"].append(Message(response, "response"))
 
     context["waiting"] = False
 

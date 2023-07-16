@@ -8,17 +8,22 @@ from typing import Dict, List, Tuple
 import validators, os
 
 DOCUMENTS_STORE_NAME = "OpenAI_QA_Over_Docs_Sources"
+QUESTIONS_STORE_NAME = "OpenAI_QA_Over_Docs_Questions"
 UPLOAD_FOLDER = 'uploads/'
 
-vector_store: Milvus
+sources_vector_store: Milvus
+questions_vector_store: Milvus
 
 connections.connect()
 
 def collection_exists():
     return utility.has_collection(DOCUMENTS_STORE_NAME)
 
+def create_collections():
+    create_sources_collection()
+    create_questions_collection()
 
-def create_collection():
+def create_sources_collection():
     if utility.has_collection(DOCUMENTS_STORE_NAME):
         print(f"Dropping {DOCUMENTS_STORE_NAME} collection")
         collection = Collection(DOCUMENTS_STORE_NAME)
@@ -57,8 +62,51 @@ def create_collection():
     collection.load()
     print(f"{DOCUMENTS_STORE_NAME} collection loaded")
 
-    global vector_store
-    vector_store = Milvus(embeddings, DOCUMENTS_STORE_NAME)
+    global sources_vector_store
+    sources_vector_store = Milvus(embeddings, DOCUMENTS_STORE_NAME)
+
+
+def create_questions_collection():
+    if utility.has_collection(QUESTIONS_STORE_NAME):
+        print(f"Dropping {QUESTIONS_STORE_NAME} collection")
+        collection = Collection(QUESTIONS_STORE_NAME)
+        collection.drop()
+
+    print(f"Creating {QUESTIONS_STORE_NAME} collection")
+    # 1. define fields
+    fields = [
+        FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
+        FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=1000),
+        FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=10000),
+        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536),
+    ]
+    # 2. enable dynamic schema in schema definition
+    schema = CollectionSchema(
+            fields, 
+            "Store previous questions and answers"
+    )
+
+    # 3. reference the schema in a collection
+    collection = Collection(QUESTIONS_STORE_NAME, schema)
+
+    # 4. index the vector field and load the collection
+    index_params = {
+        "metric_type": "L2",
+        "index_type": "HNSW",
+        "params": {"M": 8, "efConstruction": 64},
+    }
+
+    collection.create_index(
+        field_name="vector", 
+        index_params=index_params
+    )
+
+    # 5. load the collection
+    collection.load()
+    print(f"{QUESTIONS_STORE_NAME} collection loaded")
+
+    global questions_vector_store
+    questions_vector_store = Milvus(embeddings, QUESTIONS_STORE_NAME)
 
 
 def add_sources(sources: list[str]):
@@ -101,8 +149,22 @@ def add_sources(sources: list[str]):
 
         text_splitter = RecursiveCharacterTextSplitter()
         documents = text_splitter.split_documents(docs)
-        vector_store.add_documents(documents)
+        sources_vector_store.add_documents(documents)
         print(f"Successfully added sources to {DOCUMENTS_STORE_NAME} collection")
+
+
+def add_question_answer(question: str, answer: str):
+    embedded_question = embeddings.embed_query(question)
+
+    collection = Collection(QUESTIONS_STORE_NAME)
+
+    data = {
+        "question": question,
+        "answer": answer,
+        "vector": embedded_question
+    }
+
+    collection.insert(data)
 
 
 def retrieve_relevant_docs(query: str) -> list[dict]:
@@ -129,6 +191,31 @@ def retrieve_relevant_docs(query: str) -> list[dict]:
 
     return relevant_docs
 
+
+def query_most_relevant_question(query: str) -> dict:
+    embedded_query = embeddings.embed_query(query)
+
+    collection = Collection(QUESTIONS_STORE_NAME)
+
+    search_param = {
+        "metric_type": "L2",  # Similarity metric to use, e.g., "L2" or "IP"
+        "params": {"nprobe": 16}  # Extra search parameters, e.g., number of probes
+    }
+    results = collection.search(data=[embedded_query], anns_field="vector", limit=1, param=search_param)
+    results = results[0]
+
+    relevant_qa = {}
+
+    if results.ids:
+        relevant_qa = collection.query(
+            expr = f"pk in {results.ids}", 
+            output_fields = ["question", "answer"]
+        )
+
+        relevant_qa = relevant_qa[0]
+        relevant_qa["distance"] = results.distances[0]
+
+    return relevant_qa
 
 def remove_source(source: str):
     if not collection_exists():
@@ -162,4 +249,4 @@ embeddings = OpenAIEmbeddings()
 
 if utility.has_collection(DOCUMENTS_STORE_NAME):
     print(f"retrieving {DOCUMENTS_STORE_NAME} collection")
-    vector_store = Milvus(embeddings, DOCUMENTS_STORE_NAME)
+    sources_vector_store = Milvus(embeddings, DOCUMENTS_STORE_NAME)
