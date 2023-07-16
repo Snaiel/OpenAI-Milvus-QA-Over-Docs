@@ -12,6 +12,7 @@ import db
 UPLOAD_FOLDER = 'uploads/'
 ALLOWED_EXTENSIONS = {'pdf', 'csv'}
 CONTEXT_FILE = "context.json"
+SOURCES_FILE = "sources.txt"
 
 class Message():
     def __init__(self, message: str, type: str) -> None:
@@ -36,6 +37,10 @@ if not os.path.exists(UPLOAD_FOLDER):
 if os.path.exists(CONTEXT_FILE):
     with open(CONTEXT_FILE) as file:
         context = json.load(file)
+
+        if os.path.exists(SOURCES_FILE):
+            with open(SOURCES_FILE) as sources_file:
+                context["sources"] = sources_file.readlines()
 else:
     context = {
         "chat_items": [],
@@ -53,6 +58,8 @@ def save_context():
         new_context["chat_items"] = []
         new_context["response_time"] = None
         json.dump(new_context, file, indent=4)
+    with open(SOURCES_FILE, 'w' if os.path.exists(SOURCES_FILE) else 'x') as file:
+        file.writelines(list(map(lambda e: e + "\n", context["sources"])))
 
 @app.route("/", methods=['GET', 'POST'])
 def home():
