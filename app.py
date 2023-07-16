@@ -160,6 +160,9 @@ def delete_collection():
     if os.path.exists(CONTEXT_FILE):
         os.remove(CONTEXT_FILE)
     context["collection_exists"] = False
+    context["sources"] = []
+    if os.path.exists(SOURCES_FILE):
+        os.remove(SOURCES_FILE)
     flash("Collection successfully deleted", "primary")
     return redirect("/")
 
