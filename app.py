@@ -177,12 +177,17 @@ def dislike_answer(index: int):
 @app.route("/delete_collection")
 def delete_collection():
     db.delete_collection()
+
     if os.path.exists(CONTEXT_FILE):
         os.remove(CONTEXT_FILE)
-    context["collection_exists"] = False
-    context["sources"] = []
     if os.path.exists(SOURCES_FILE):
         os.remove(SOURCES_FILE)
+
+    context["collection_exists"] = False
+    context["sources"] = []
+    context["response_time"] = None
+    context["chat_items"] = []
+
     flash("Collection successfully deleted", "primary")
     return redirect("/")
 
@@ -194,7 +199,7 @@ def response(user_input: str):
     relevant_qa = db.query_most_relevant_question(user_input)
     pprint(relevant_qa)
 
-    if relevant_qa["distance"] < 0.4:
+    if "distance" in relevant_qa and relevant_qa["distance"] < 0.4:
         context["chat_items"].append(Message(relevant_qa["answer"], "response", relevant_qa["pk"]))
     else:
         relevant_docs = db.retrieve_relevant_docs(user_input)

@@ -3,9 +3,17 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 from langchain.vectorstores.milvus import Milvus
 from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
 from typing import Dict, List, Tuple
 import validators, os
+
+print("retrieving Embeddings model")
+
+embeddings = OpenAIEmbeddings()
+# embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+EMBEDDINGS_DIMENSIONS = len(embeddings.embed_query("query"))
 
 DOCUMENTS_STORE_NAME = "OpenAI_QA_Over_Docs_Sources"
 QUESTIONS_STORE_NAME = "OpenAI_QA_Over_Docs_Questions"
@@ -34,7 +42,7 @@ def create_sources_collection():
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
         FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=65_535),
-        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536),
+        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDINGS_DIMENSIONS),
         FieldSchema(name='metadata', dtype=DataType.JSON)
     ]
     # 2. enable dynamic schema in schema definition
@@ -76,9 +84,9 @@ def create_questions_collection():
     # 1. define fields
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
-        FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=1000),
-        FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=10000),
-        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536),
+        FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=100),
+        FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=1000),
+        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDINGS_DIMENSIONS),
     ]
     # 2. enable dynamic schema in schema definition
     schema = CollectionSchema(
@@ -249,15 +257,12 @@ def remove_source(source: str):
 
 
 def delete_collection():
-    if utility.has_collection(DOCUMENTS_STORE_NAME):
-        print(f"Dropping {DOCUMENTS_STORE_NAME} collection")
-        collection = Collection(DOCUMENTS_STORE_NAME)
-        collection.drop()
+    for col in [DOCUMENTS_STORE_NAME, QUESTIONS_STORE_NAME]:
+        if utility.has_collection(col):
+            print(f"Dropping {col} collection")
+            collection = Collection(col)
+            collection.drop()
 
-
-
-print("retrieving HuggingFace embeddings")
-embeddings = OpenAIEmbeddings()
 
 if utility.has_collection(DOCUMENTS_STORE_NAME):
     print(f"retrieving {DOCUMENTS_STORE_NAME} collection")
