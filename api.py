@@ -21,7 +21,7 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> str:
     ]
 
     base_token_length = get_messages_token_length(messages)
-    max_token_length = 4000
+    max_token_length = 3700
 
     context = ""
 

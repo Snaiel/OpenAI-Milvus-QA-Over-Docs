@@ -86,6 +86,52 @@ def home():
     return render_template("index.html", **context)
 
 
+def response(user_input: str, force_generate_new: bool = False):
+    st = time()
+    sleep(0.1)
+
+    if force_generate_new:
+        relevant_qa = {}
+    else:
+        relevant_qa = db.query_most_relevant_question(user_input)
+    # pprint(relevant_qa)
+
+    if "distance" in relevant_qa and relevant_qa["distance"] < 0.4:
+        print("Relevant question distance: " + str(relevant_qa["distance"]))
+        context["chat_items"].append(Message(relevant_qa["answer"], "response", relevant_qa["pk"]))
+    else:
+        relevant_docs = db.retrieve_relevant_docs(user_input)
+        pprint(relevant_docs)
+        response = retrieve_response(user_input, relevant_docs)
+        context["chat_items"].append(Message(response, "response"))
+
+    context["waiting"] = False
+
+    sleep(0.2)
+    et = time()
+
+    response_time = et - st
+    print(f"Response time: {response_time}")
+
+    context["response_time"] = response_time
+    socketio.emit('response_received')
+
+
+@app.route("/generate_new_answer/<int:index>")
+def generate_new_answer(index: int):
+    question = context["chat_items"][index - 1].message
+
+    context["response_time"] = None
+    context["chat_items"].append(Message(question, "user"))
+
+    thread = Thread(target=response, args=(question,True))
+    thread.start()
+
+    context["waiting"] = True
+    
+    return redirect("/")
+
+
 @app.route('/create_collection')
 def create_collection():
     if not db.collection_exists():
@@ -190,32 +236,6 @@ def delete_collection():
 
     flash("Collection successfully deleted", "primary")
     return redirect("/")
-
-
-def response(user_input: str):
-    st = time()
-    sleep(0.1)
-
-    relevant_qa = db.query_most_relevant_question(user_input)
-    pprint(relevant_qa)
-
-    if "distance" in relevant_qa and relevant_qa["distance"] < 0.4:
-        context["chat_items"].append(Message(relevant_qa["answer"], "response", relevant_qa["pk"]))
-    else:
-        relevant_docs = db.retrieve_relevant_docs(user_input)
-        response = retrieve_response(user_input, relevant_docs)
-        context["chat_items"].append(Message(response, "response"))
-
-    context["waiting"] = False
-
-    sleep(0.2)
-    et = time()
-
-    response_time = et - st
-    print(f"Response time: {response_time}")
-
-    context["response_time"] = response_time
-    socketio.emit('response_received')
 
 
 if __name__ == '__main__':

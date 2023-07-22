@@ -197,6 +197,9 @@ def retrieve_relevant_docs(query: str) -> list[dict]:
     # Sort the data list based on the order index of each pk value
     relevant_docs = sorted(relevant_docs, key=lambda d: order_dict.get(d['pk'], float('inf')))
 
+    for i in range(len(relevant_docs)):
+        relevant_docs[i]["distance"] = results.distances[i]
+
     return relevant_docs
 
 
