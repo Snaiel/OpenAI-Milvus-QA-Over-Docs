@@ -33,7 +33,7 @@ class Question(Message):
         super().__init__(message)
 
 class Answer(Message):
-    def __init__(self, message: str = "", saved_question: int = None, comment: str = None) -> None:
+    def __init__(self, message: str = "", saved_question: str = None, comment: str = None) -> None:
         super().__init__(message)
         self.saved_question = saved_question # the primary key of the previous question
         self.comment = comment # whether the answer is from a `new`, `similar`, or `identical` question
@@ -97,7 +97,7 @@ def home():
 
         context["waiting"] = True
 
-    return render_template("index.html", **context)
+    return render_template("index.html", **context, response_comments=RESPONSE_COMMENTS)
 
 
 def response(user_input: str, force_generate_new: bool = False):
@@ -117,18 +117,18 @@ def response(user_input: str, force_generate_new: bool = False):
         distance = relevant_qa["distance"]
         if distance < 0.4:
             answer.message = relevant_qa["answer"]
-            answer.saved_question = relevant_qa["pk"]
+            answer.saved_question = relevant_qa["question"]
             if distance < 0.1:
-                answer.comment = RESPONSE_COMMENTS["identical"]
+                answer.comment = "identical"
             else:
-                answer.comment = RESPONSE_COMMENTS["similar"]
+                answer.comment = "similar"
         else:
             force_generate_new = True
     else:
         force_generate_new = True
 
     if force_generate_new:
-        answer.comment = RESPONSE_COMMENTS["new"]
+        answer.comment = "new"
         relevant_docs = db.retrieve_relevant_docs(user_input)
         # pprint(relevant_docs)
         response = retrieve_response(user_input, relevant_docs)
