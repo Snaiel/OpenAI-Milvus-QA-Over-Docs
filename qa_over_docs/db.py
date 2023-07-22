@@ -5,7 +5,6 @@ from langchain.vectorstores.milvus import Milvus
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
-from typing import Dict, List, Tuple
 import validators, os
 
 print("retrieving Embeddings model")
