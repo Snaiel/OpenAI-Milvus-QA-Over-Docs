@@ -48,7 +48,7 @@ def create_sources_collection():
     # 2. enable dynamic schema in schema definition
     schema = CollectionSchema(
             fields, 
-            "Documents as context to give to OpenAI's chat completion API"
+            "Documents as context to give to large language model"
     )
 
     # 3. reference the schema in a collection
@@ -81,13 +81,15 @@ def create_questions_collection():
         collection.drop()
 
     print(f"Creating {QUESTIONS_STORE_NAME} collection")
+
     # 1. define fields
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
         FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=100),
         FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=1000),
-        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDINGS_DIMENSIONS),
+        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDINGS_DIMENSIONS, description="vector embedding of question")
     ]
+
     # 2. enable dynamic schema in schema definition
     schema = CollectionSchema(
             fields, 

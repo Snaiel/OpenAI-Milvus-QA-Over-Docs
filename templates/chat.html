@@ -2,16 +2,15 @@
 <div class="w-100 my-3 pt-3 d-flex flex-column-reverse bg-body-secondary rounded text-left overflow-auto" style="height: 60vh;">
 {% for i in range(chat_items|length - 1, -1, -1) %}
     {% set item = chat_items[i] %}
-    {% if item.type == "user" %}
+    {% if item.__class__.__name__ == "Question" %}
     <div class="m-3 mt-0 p-3 bg-dark-subtle rounded">
     {{ item.message }}
     </div>
-    {% elif item.type == "response" %}
+    {% elif item.__class__.__name__ == "Answer" %}
     <div class="m-3 mt-0 p-3 bg-light-subtle rounded">
-        {% for line in item.lines() %}
-            {% if item.lines().index(line) == 0 %}
-            <div class="float-end d-flex flex-column ms-2">
-                <a href="/like_answer/{{ i }}" class=" link-secondary link-opacity-25-hover mb-1" title="Like this answer">
+        <div class="text-secondary text-center pb-2">
+            <div class="float-end d-flex flex-column ms-3">
+                <a href="/like_answer/{{ i }}" class=" link-secondary link-opacity-25-hover mb-1 lh-1" title="Like this answer">
                     <svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" width="18" viewBox="0 0 32 32">
                         <path d="M27 11h-8.52L19 9.8A6.42 6.42 0 0 0 13 1a1 1 0 0 0-.93.63L8.32 11H5a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h18.17a3 3 0 0 0 2.12-.88l3.83-3.83a3 3 0 0 0 .88-2.12V14a3 3 0 0 0-3-3zM4 28V14a1 1 0 0 1 1-1h3v16H5a1 1 0 0 1-1-1zm24-3.83a1 1 0 0 1-.29.71l-3.83 3.83a1.05 1.05 0 0 1-.71.29H10V12.19l3.66-9.14a4.31 4.31 0 0 1 3 1.89 4.38 4.38 0 0 1 .44 4.12l-1 2.57A1 1 0 0 0 17 13h10a1 1 0 0 1 1 1z" data-name="thumb up android app aplication phone"/>
                     </svg>
@@ -28,6 +27,10 @@
                     </svg>
                 </a>
             </div>
+            {{ item.comment }}
+        </div>
+        {% for line in item.lines() %}
+            {% if item.lines().index(line) == 0 %}
             {% endif %}
             {{ line }} <br>
         {% endfor %}

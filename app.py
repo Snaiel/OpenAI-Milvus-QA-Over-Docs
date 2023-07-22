@@ -15,18 +15,32 @@ ALLOWED_EXTENSIONS = {'pdf', 'csv'}
 CONTEXT_FILE = "context.json"
 SOURCES_FILE = "sources.txt"
 
+RESPONSE_COMMENTS = {
+    "new": "This answer is newly generated",
+    "similar": "This answer came from a similar question",
+    "identical": "This answer came from an identical question"
+}
 
 class Message():
-    def __init__(self, message: str, type: str, saved_question: int = None) -> None:
-        self.message = message
-        self.type = type
-        self.saved_question = saved_question
+    def __init__(self, message: str = "") -> None:
+        self.message = message # the user's question or the answer
 
     def __str__(self) -> str:
         return self.message
-    
+
+class Question(Message):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+class Answer(Message):
+    def __init__(self, message: str = "", saved_question: int = None, comment: str = None) -> None:
+        super().__init__(message)
+        self.saved_question = saved_question # the primary key of the previous question
+        self.comment = comment # whether the answer is from a `new`, `similar`, or `identical` question
+
     def lines(self) -> list[str]:
         return self.message.splitlines()
+
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -76,7 +90,7 @@ def home():
         context["response_time"] = None
         user_input = request.form['user_input']
 
-        context["chat_items"].append(Message(user_input, "user"))
+        context["chat_items"].append(Question(user_input))
 
         thread = Thread(target=response, args=(user_input,))
         thread.start()
@@ -90,20 +104,37 @@ def response(user_input: str, force_generate_new: bool = False):
     st = time()
     sleep(0.1)
 
+    answer = Answer()
+
     if force_generate_new:
         relevant_qa = {}
     else:
         relevant_qa = db.query_most_relevant_question(user_input)
     # pprint(relevant_qa)
 
-    if "distance" in relevant_qa and relevant_qa["distance"] < 0.4:
+    if "distance" in relevant_qa:
         print("Relevant question distance: " + str(relevant_qa["distance"]))
-        context["chat_items"].append(Message(relevant_qa["answer"], "response", relevant_qa["pk"]))
+        distance = relevant_qa["distance"]
+        if distance < 0.4:
+            answer.message = relevant_qa["answer"]
+            answer.saved_question = relevant_qa["pk"]
+            if distance < 0.1:
+                answer.comment = RESPONSE_COMMENTS["identical"]
+            else:
+                answer.comment = RESPONSE_COMMENTS["similar"]
+        else:
+            force_generate_new = True
     else:
+        force_generate_new = True
+
+    if force_generate_new:
+        answer.comment = RESPONSE_COMMENTS["new"]
         relevant_docs = db.retrieve_relevant_docs(user_input)
-        pprint(relevant_docs)
+        # pprint(relevant_docs)
         response = retrieve_response(user_input, relevant_docs)
-        context["chat_items"].append(Message(response, "response"))
+        answer.message = response
+
+    context["chat_items"].append(answer)
 
     context["waiting"] = False
 
@@ -122,7 +153,7 @@ def generate_new_answer(index: int):
     question = context["chat_items"][index - 1].message
 
     context["response_time"] = None
-    context["chat_items"].append(Message(question, "user"))
+    context["chat_items"].append(Question(question))
 
     thread = Thread(target=response, args=(question,True))
     thread.start()
