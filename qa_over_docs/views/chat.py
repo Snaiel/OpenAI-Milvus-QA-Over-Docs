@@ -5,7 +5,7 @@ from pprint import pprint
 
 from qa_over_docs import app, context, socketio, save_context
 from qa_over_docs.message import Question, Answer
-from qa_over_docs import db
+from qa_over_docs import vector_db
 from qa_over_docs import api
 
 RESPONSE_COMMENTS = {
@@ -41,7 +41,7 @@ def response(user_input: str, force_generate_new: bool = False):
     if force_generate_new:
         relevant_qa = {}
     else:
-        relevant_qa = db.query_most_relevant_question(user_input)
+        relevant_qa = vector_db.query_most_relevant_question(user_input)
     # pprint(relevant_qa)
 
     if "distance" in relevant_qa:
@@ -61,7 +61,7 @@ def response(user_input: str, force_generate_new: bool = False):
 
     if force_generate_new:
         answer.comment = "new"
-        relevant_docs = db.retrieve_relevant_docs(user_input)
+        relevant_docs = vector_db.retrieve_relevant_docs(user_input)
         # pprint(relevant_docs)
         response = api.retrieve_response(user_input, relevant_docs)
         answer.message = response
@@ -99,7 +99,7 @@ def generate_new_answer(index: int):
 def like_answer(index: int):
     question = context["chat_items"][index - 1]
     answer = context["chat_items"][index]
-    db.add_question_answer(question.message, answer.message)
+    vector_db.add_question_answer(question.message, answer.message)
     flash("Answer saved as a response", "success")
     return redirect("/")
 
@@ -108,6 +108,6 @@ def like_answer(index: int):
 def dislike_answer(index: int):
     answer = context["chat_items"][index] # type: Answer
     if answer.saved_question:
-        db.remove_answer(answer.saved_question)
+        vector_db.remove_answer(answer.saved_question)
         flash("Answer removed from saved responses", "primary")
     return redirect("/")
