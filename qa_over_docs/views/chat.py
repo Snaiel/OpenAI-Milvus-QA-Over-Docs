@@ -2,11 +2,10 @@ from flask import render_template, request, redirect, flash
 from threading import Thread
 from time import time, sleep
 from pprint import pprint
+import sqlalchemy as sa
 
-from qa_over_docs import app, context, socketio, save_context
-from qa_over_docs.message import Question, Answer
-from qa_over_docs import vector_db
-from qa_over_docs import api
+from qa_over_docs import app, context, socketio, save_context, r_db
+from qa_over_docs import vector_db, relational_db, api, message
 
 RESPONSE_COMMENTS = {
     "new": "This answer is newly generated",
@@ -22,7 +21,7 @@ def home():
         context["response_time"] = None
         user_input = request.form['user_input']
 
-        context["chat_items"].append(Question(user_input))
+        context["chat_items"].append(message.Question(user_input))
 
         thread = Thread(target=response, args=(user_input,))
         thread.start()
@@ -36,7 +35,7 @@ def response(user_input: str, force_generate_new: bool = False):
     st = time()
     sleep(0.1)
 
-    answer = Answer()
+    answer = message.Answer()
 
     if force_generate_new:
         relevant_qa = {}
@@ -85,7 +84,7 @@ def generate_new_answer(index: int):
     question = context["chat_items"][index - 1].message
 
     context["response_time"] = None
-    context["chat_items"].append(Question(question))
+    context["chat_items"].append(message.Question(question))
 
     thread = Thread(target=response, args=(question,True))
     thread.start()
@@ -106,7 +105,7 @@ def like_answer(index: int):
 
 @app.route("/dislike_answer/<int:index>")
 def dislike_answer(index: int):
-    answer = context["chat_items"][index] # type: Answer
+    answer = context["chat_items"][index] # type: message.Answer
     if answer.saved_question:
         vector_db.remove_answer(answer.saved_question)
         flash("Answer removed from saved responses", "primary")

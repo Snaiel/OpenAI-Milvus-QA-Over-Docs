@@ -2,7 +2,7 @@ from flask import request, redirect, flash
 from werkzeug.utils import secure_filename
 import os, shutil, validators
 from qa_over_docs import vector_db
-from qa_over_docs import app, context, ALLOWED_EXTENSIONS, UPLOAD_FOLDER, CONTEXT_FILE, SOURCES_FILE
+from qa_over_docs import app, context, r_db, ALLOWED_EXTENSIONS, UPLOAD_FOLDER, CONTEXT_FILE, SOURCES_FILE
 
 
 @app.route('/create_collection')
@@ -10,6 +10,11 @@ def create_collection():
     if not vector_db.collection_exists():
         vector_db.create_collections()
     context["collection_exists"] = True
+
+    from qa_over_docs.relational_db import Question, Answer, Response
+    with app.app_context():
+        r_db.create_all()
+
     flash("Collection successfully created", "success")
     return redirect("/")
 
@@ -78,6 +83,10 @@ def remove_source(index: int):
 @app.route("/delete_collection")
 def delete_collection():
     vector_db.delete_collection()
+
+    INSTANCE_DB = "instance/project.db"
+    if os.path.exists(INSTANCE_DB):
+        os.remove(INSTANCE_DB)
 
     if os.path.exists(CONTEXT_FILE):
         os.remove(CONTEXT_FILE)

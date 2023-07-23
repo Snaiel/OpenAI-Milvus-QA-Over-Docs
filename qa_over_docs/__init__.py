@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, flash, url_for
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 import os, json
 
@@ -10,7 +11,10 @@ SOURCES_FILE = "sources.txt"
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'a super secret key'
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
 app.debug = True
+
+r_db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
 if not os.path.exists(UPLOAD_FOLDER):

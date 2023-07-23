@@ -4,3 +4,5 @@ langchain
 openai
 pymilvus
 python-dotenv
+Flask-SQLAlchemy
+sqlalchemy
