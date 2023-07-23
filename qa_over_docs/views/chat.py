@@ -172,8 +172,6 @@ def generate_new_answer(index: int):
     context["response_time"] = None
     context["chat_items"].append(question)
 
-    print(question.id, answer.id)
-
     r_response: relational_db.Response = r_db.session.query(relational_db.Response)\
         .filter(relational_db.Response.question == question.id)\
         .filter(relational_db.Response.answer == answer.id)\

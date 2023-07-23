@@ -145,8 +145,6 @@ def add_sources(sources: list[str]):
                 'metadata': doc.metadata
             }
         return docs
-    
-    print(loaders)
 
     if loaders:
         docs = []
