@@ -38,17 +38,17 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
     answer_message = message.Answer()
 
     if force_generate_new:
-        relevant_qa = {}
+        relevant_q = {}
     else:
-        relevant_qa = vector_db.query_most_relevant_question(user_input)
+        relevant_q = vector_db.query_most_relevant_question(user_input)
     # pprint(relevant_qa)
 
     question: relational_db.Question
     answer: relational_db.Answer
 
-    if "distance" in relevant_qa:
-        print("Relevant question distance: " + str(relevant_qa["distance"]))
-        distance = relevant_qa["distance"]
+    if "distance" in relevant_q:
+        print("Relevant question distance: " + str(relevant_q["distance"]))
+        distance = relevant_q["distance"]
         if distance < 0.4:
             with app.app_context():
 
@@ -56,7 +56,7 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
                 question, answer = r_db.session.query(relational_db.Question, relational_db.Answer)\
                     .join(relational_db.Response, relational_db.Response.question == relational_db.Question.id)\
                     .join(relational_db.Answer, relational_db.Response.answer == relational_db.Answer.id)\
-                    .filter(relational_db.Question.id == relevant_qa["question_id"])\
+                    .filter(relational_db.Question.id == relevant_q["question_id"])\
                     .order_by(relational_db.Response.timestamp.desc())\
                     .first()
 
@@ -210,4 +210,41 @@ def dislike_answer(index: int):
     response.dislikes += 1
     r_db.session.commit()
     flash("Answer disliked", "primary")
+    return redirect("/")
+
+
+@app.route("/suggest_question/", methods=['GET', 'POST'])
+def suggest_question():
+    if request.method == 'POST':
+        context["response_time"] = None
+        suggested_question: str = request.form['suggested-question']
+        answer_message: message.Answer = context["chat_items"][int(request.form['answer-index'])]
+
+        answer = relational_db.Answer(answer=answer_message.message)
+        r_db.session.add(answer)
+        r_db.session.commit()
+
+        relevant_q = vector_db.query_most_relevant_question(suggested_question)
+
+        question: relational_db.Question
+        if "distance" in relevant_q and relevant_q["distance"] < 0.1:
+            question = r_db.session.query(relational_db.Question)\
+                    .filter(relational_db.Question.id == relevant_q["question_id"])\
+                    .first()
+        else:
+            question = relational_db.Question(question=suggested_question)
+            r_db.session.add(question)
+            r_db.session.commit()
+
+            vector_db.add_question(question.id, suggested_question)
+
+        response = relational_db.Response(
+            question=question.id,
+            answer=answer.id
+        )
+        r_db.session.add(response)
+        r_db.session.commit()
+
+        flash("Successfully created new response that maps answer to given question", "success")
+
     return redirect("/")
