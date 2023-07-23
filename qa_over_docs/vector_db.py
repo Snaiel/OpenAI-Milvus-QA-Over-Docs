@@ -84,9 +84,8 @@ def create_questions_collection():
     # 1. define fields
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
-        FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=1000),
-        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDINGS_DIMENSIONS, description="vector embedding of question")
+        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDINGS_DIMENSIONS, description="vector embedding of question"),
+        FieldSchema(name="question_id", dtype=DataType.INT64, description="primary key of question in relational database")
     ]
 
     # 2. enable dynamic schema in schema definition
@@ -162,15 +161,14 @@ def add_sources(sources: list[str]):
         print(f"Successfully added sources to {DOCUMENTS_STORE_NAME} collection")
 
 
-def add_question_answer(question: str, answer: str):
-    embedded_question = embeddings.embed_query(question)
+def add_question(id: str, text: str):
+    embedded_question = embeddings.embed_query(text)
 
     collection = Collection(QUESTIONS_STORE_NAME)
 
     data = {
-        "question": question,
-        "answer": answer,
-        "vector": embedded_question
+        "vector": embedded_question,
+        "question_id": id
     }
 
     collection.insert(data)
@@ -221,7 +219,7 @@ def query_most_relevant_question(query: str) -> dict:
     if results.ids:
         relevant_qa = collection.query(
             expr = f"pk in {results.ids}", 
-            output_fields = ["question", "answer"]
+            output_fields = ["question_id"]
         )
 
         relevant_qa = relevant_qa[0]

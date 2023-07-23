@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 class Question(r_db.Model):
     id = r_db.Column(Integer, primary_key=True)
     question = r_db.Column(String, nullable=False)
-    count = r_db.Column(Integer, default=0)
+    count = r_db.Column(Integer, default=1)
 
 class Answer(r_db.Model):
     id = r_db.Column(Integer, primary_key=True)

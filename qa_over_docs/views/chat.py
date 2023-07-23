@@ -35,7 +35,7 @@ def response(user_input: str, force_generate_new: bool = False):
     st = time()
     sleep(0.1)
 
-    answer = message.Answer()
+    answer_message = message.Answer()
 
     if force_generate_new:
         relevant_qa = {}
@@ -47,25 +47,75 @@ def response(user_input: str, force_generate_new: bool = False):
         print("Relevant question distance: " + str(relevant_qa["distance"]))
         distance = relevant_qa["distance"]
         if distance < 0.4:
-            answer.message = relevant_qa["answer"]
-            answer.saved_question = relevant_qa["question"]
-            if distance < 0.1:
-                answer.comment = "identical"
-            else:
-                answer.comment = "similar"
+            with app.app_context():
+                question: relational_db.Question
+                answer: relational_db.Answer
+
+                question, answer = r_db.session.query(relational_db.Question, relational_db.Answer)\
+                    .join(relational_db.Response, relational_db.Response.question == relational_db.Question.id)\
+                    .join(relational_db.Answer, relational_db.Response.answer == relational_db.Answer.id)\
+                    .filter(relational_db.Question.id == relevant_qa["question_id"])\
+                    .first()
+
+                if distance < 0.1:
+                    answer_message.comment = "identical"
+                    question.count += 1
+                    r_db.session.commit()
+                else:
+                    answer_message.comment = "similar"
+                    new_question = relational_db.Question(question=user_input)
+                    r_db.session.add(new_question)
+                    r_db.session.commit()
+
+                    vector_db.add_question(
+                        new_question.id,
+                        user_input
+                    )
+                    
+                    new_response = relational_db.Response(
+                        question=new_question.id,
+                        answer=answer.id
+                    )
+                    r_db.session.add(new_response)
+                    r_db.session.commit()
+
+                answer_message.saved_question = question.question
+                answer_message.message = answer.answer
         else:
             force_generate_new = True
     else:
         force_generate_new = True
 
     if force_generate_new:
-        answer.comment = "new"
+        answer_message.comment = "new"
         relevant_docs = vector_db.retrieve_relevant_docs(user_input)
-        # pprint(relevant_docs)
-        response = api.retrieve_response(user_input, relevant_docs)
-        answer.message = response
+        text_answer = api.retrieve_response(user_input, relevant_docs)
 
-    context["chat_items"].append(answer)
+        with app.app_context():
+            question = relational_db.Question(question=user_input)
+            answer = relational_db.Answer(answer=text_answer)
+
+            r_db.session.add(question)
+            r_db.session.add(answer)
+
+            r_db.session.commit()
+
+            vector_db.add_question(
+                question.id,
+                user_input
+            )
+
+            response = relational_db.Response(
+                question=question.id,
+                answer=answer.id
+            )
+
+            r_db.session.add(response)
+            r_db.session.commit()
+
+        answer_message.message = text_answer
+
+    context["chat_items"].append(answer_message)
 
     context["waiting"] = False
 
@@ -98,7 +148,7 @@ def generate_new_answer(index: int):
 def like_answer(index: int):
     question = context["chat_items"][index - 1]
     answer = context["chat_items"][index]
-    vector_db.add_question_answer(question.message, answer.message)
+    # vector_db.add_question_answer(question.message, answer.message)
     flash("Answer saved as a response", "success")
     return redirect("/")
 
