@@ -35,11 +35,11 @@
 {% endif %}
 
 {% if not collection_exists %}
-<a href="/create_collection" class="btn btn-primary">Create Collection</a>
+<a href="/create_databases" class="btn btn-primary">Create Databases</a>
 {% endif %}
 
 {% include 'add_sources.html' %}
 
 {% if collection_exists %}
-<a href="/delete_collection" class="btn btn-outline-secondary">Delete Collection</a>
+<a href="/delete_databases" class="btn btn-outline-secondary">Delete Databases</a>
 {% endif %}
