@@ -1,5 +1,7 @@
 # OpenAI-Milvus-QA-Over-Docs
 
+![screenshot of prgram](images/screenshot.png)
+
 Uses [Milvus](https://milvus.io/) as a document store and [OpenAI's](https://platform.openai.com/docs/models/gpt-3-5) chat API for a simple app that allows the user ask question based on given sources.
 
 - Supports CSV, PDF files
@@ -8,6 +10,8 @@ Uses [Milvus](https://milvus.io/) as a document store and [OpenAI's](https://pla
 - No chat memory/history
 
 ## How it works
+
+![diagram of architecture](images/diagram.png)
 
 1. A Milvus instance is run
 2. Files and websites are ingested through [Langchain's](https://github.com/hwchase17/langchain) document loaders and text splitter
