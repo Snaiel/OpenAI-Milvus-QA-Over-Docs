@@ -31,7 +31,7 @@ def home():
     return render_template("index.html", **context, response_comments=RESPONSE_COMMENTS)
 
 
-def response(user_input: str, force_generate_new: bool = False):
+def response(user_input: str, force_generate_new: bool = False, previous_response: relational_db.Response  = None):
     st = time()
     sleep(0.1)
 
@@ -43,35 +43,48 @@ def response(user_input: str, force_generate_new: bool = False):
         relevant_qa = vector_db.query_most_relevant_question(user_input)
     # pprint(relevant_qa)
 
+    question: relational_db.Question
+    answer: relational_db.Answer
+
     if "distance" in relevant_qa:
         print("Relevant question distance: " + str(relevant_qa["distance"]))
         distance = relevant_qa["distance"]
         if distance < 0.4:
             with app.app_context():
-                question: relational_db.Question
-                answer: relational_db.Answer
 
+                # retrieve previous question and answer from relational database
                 question, answer = r_db.session.query(relational_db.Question, relational_db.Answer)\
                     .join(relational_db.Response, relational_db.Response.question == relational_db.Question.id)\
                     .join(relational_db.Answer, relational_db.Response.answer == relational_db.Answer.id)\
                     .filter(relational_db.Question.id == relevant_qa["question_id"])\
+                    .order_by(relational_db.Response.timestamp.desc())\
                     .first()
 
+                context["chat_items"][-1].id = question.id
+
                 if distance < 0.1:
+                    # treat the user's input and the retrieved question as the same
                     answer_message.comment = "identical"
                     question.count += 1
                     r_db.session.commit()
                 else:
+                    # create a new question from the user's input but
+                    # assign the response to the question to be the
+                    # similar question's answer
                     answer_message.comment = "similar"
+
+                    # add the new question to the relational database
                     new_question = relational_db.Question(question=user_input)
                     r_db.session.add(new_question)
                     r_db.session.commit()
 
+                    # add the new question to vector collection
                     vector_db.add_question(
                         new_question.id,
                         user_input
                     )
                     
+                    # add the new response to the relational database
                     new_response = relational_db.Response(
                         question=new_question.id,
                         answer=answer.id
@@ -79,10 +92,12 @@ def response(user_input: str, force_generate_new: bool = False):
                     r_db.session.add(new_response)
                     r_db.session.commit()
 
+                # assign the message to be shown in the chat interface
                 answer_message.id = answer.id
                 answer_message.saved_question = question.question
                 answer_message.message = answer.answer
         else:
+            # no similar questions (distance >= 0.4)
             force_generate_new = True
     else:
         force_generate_new = True
@@ -95,19 +110,35 @@ def response(user_input: str, force_generate_new: bool = False):
         answer_message.message = text_answer
 
         with app.app_context():
-            question = relational_db.Question(question=user_input)
-            answer = relational_db.Answer(answer=text_answer)
+            if previous_response:
+                # retrieve previous question
+                question = r_db.session.query(relational_db.Question)\
+                    .join(relational_db.Response, relational_db.Response.question == relational_db.Question.id)\
+                    .filter(relational_db.Question.id == previous_response.question)\
+                    .first()
+                pass
+            else:
+                # create new question
+                question = relational_db.Question(question=user_input)
+                r_db.session.add(question)
 
-            r_db.session.add(question)
+                r_db.session.commit()            
+
+                # add question to vector collection
+                vector_db.add_question(
+                    question.id,
+                    user_input
+                )
+
+            context["chat_items"][-1].id = question.id
+
+            # create new answer
+            answer = relational_db.Answer(answer=text_answer)
             r_db.session.add(answer)
 
-            r_db.session.commit()
+            r_db.session.commit()            
 
-            vector_db.add_question(
-                question.id,
-                user_input
-            )
-
+            # add response to relational database
             response = relational_db.Response(
                 question=question.id,
                 answer=answer.id
@@ -118,6 +149,7 @@ def response(user_input: str, force_generate_new: bool = False):
 
             answer_message.id = answer.id
 
+            
     context["chat_items"].append(answer_message)
 
     context["waiting"] = False
@@ -134,12 +166,20 @@ def response(user_input: str, force_generate_new: bool = False):
 
 @app.route("/generate_new_answer/<int:index>")
 def generate_new_answer(index: int):
-    question = context["chat_items"][index - 1].message
+    question: message.Question = context["chat_items"][index - 1]
+    answer: message.Answer = context["chat_items"][index]
 
     context["response_time"] = None
-    context["chat_items"].append(message.Question(question))
+    context["chat_items"].append(question)
 
-    thread = Thread(target=response, args=(question,True))
+    print(question.id, answer.id)
+
+    r_response: relational_db.Response = r_db.session.query(relational_db.Response)\
+        .filter(relational_db.Response.question == question.id)\
+        .filter(relational_db.Response.answer == answer.id)\
+        .first()
+
+    thread = Thread(target=response, args=(question.message,True,r_response))
     thread.start()
 
     context["waiting"] = True
