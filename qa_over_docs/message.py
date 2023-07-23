@@ -6,12 +6,13 @@ class Message():
         return self.message
 
 class Question(Message):
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str = "") -> None:
         super().__init__(message)
 
 class Answer(Message):
-    def __init__(self, message: str = "", saved_question: str = None, comment: str = None) -> None:
+    def __init__(self,message: str = "", id: int = None,  saved_question: str = None, comment: str = None) -> None:
         super().__init__(message)
+        self.id = id # the id of the answer in the relational database
         self.saved_question = saved_question # the primary key of the previous question
         self.comment = comment # whether the answer is from a `new`, `similar`, or `identical` question
 

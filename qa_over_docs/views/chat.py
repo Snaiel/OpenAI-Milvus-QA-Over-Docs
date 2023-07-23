@@ -79,6 +79,7 @@ def response(user_input: str, force_generate_new: bool = False):
                     r_db.session.add(new_response)
                     r_db.session.commit()
 
+                answer_message.id = answer.id
                 answer_message.saved_question = question.question
                 answer_message.message = answer.answer
         else:
@@ -90,6 +91,8 @@ def response(user_input: str, force_generate_new: bool = False):
         answer_message.comment = "new"
         relevant_docs = vector_db.retrieve_relevant_docs(user_input)
         text_answer = api.retrieve_response(user_input, relevant_docs)
+
+        answer_message.message = text_answer
 
         with app.app_context():
             question = relational_db.Question(question=user_input)
@@ -113,7 +116,7 @@ def response(user_input: str, force_generate_new: bool = False):
             r_db.session.add(response)
             r_db.session.commit()
 
-        answer_message.message = text_answer
+            answer_message.id = answer.id
 
     context["chat_items"].append(answer_message)
 
@@ -146,17 +149,25 @@ def generate_new_answer(index: int):
 
 @app.route("/like_answer/<int:index>")
 def like_answer(index: int):
-    question = context["chat_items"][index - 1]
-    answer = context["chat_items"][index]
-    # vector_db.add_question_answer(question.message, answer.message)
-    flash("Answer saved as a response", "success")
+    answer: message.Answer = context["chat_items"][index]
+    response: relational_db.Response = r_db.session.execute(
+        sa.select(relational_db.Response)
+            .filter_by(answer=answer.id)
+    ).first()[0]
+    response.likes += 1
+    r_db.session.commit()
+    flash("Answer liked", "success")
     return redirect("/")
 
 
 @app.route("/dislike_answer/<int:index>")
 def dislike_answer(index: int):
-    answer = context["chat_items"][index] # type: message.Answer
-    if answer.saved_question:
-        vector_db.remove_answer(answer.saved_question)
-        flash("Answer removed from saved responses", "primary")
+    answer: message.Answer = context["chat_items"][index]
+    response: relational_db.Response = r_db.session.execute(
+        sa.select(relational_db.Response)
+            .filter_by(answer=answer.id)
+    ).first()[0]
+    response.dislikes += 1
+    r_db.session.commit()
+    flash("Answer disliked", "primary")
     return redirect("/")
