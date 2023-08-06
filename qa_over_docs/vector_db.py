@@ -6,6 +6,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
 import validators, os
+from qa_over_docs import r_db, relational_db
 
 print("retrieving Embeddings model")
 
@@ -158,8 +159,14 @@ def add_sources(sources: list[str]):
 
         text_splitter = RecursiveCharacterTextSplitter()
         documents = text_splitter.split_documents(docs)
-        sources_vector_store.add_documents(documents)
+        ids = sources_vector_store.add_documents(documents)
         print(f"Successfully added sources to {DOCUMENTS_STORE_NAME} collection")
+
+        for id in ids:
+            source = relational_db.Source(vector_id=id)
+            r_db.session.add(source)
+        r_db.session.commit()
+        print(f"Successfully added sources to relational database")
 
 
 def add_question(id: str, text: str):

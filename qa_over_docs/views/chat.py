@@ -53,12 +53,12 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
             with app.app_context():
 
                 # retrieve previous question and answer from relational database
-                question, answer = r_db.session.query(relational_db.Question, relational_db.Answer)\
-                    .join(relational_db.Response, relational_db.Response.question == relational_db.Question.id)\
-                    .join(relational_db.Answer, relational_db.Response.answer == relational_db.Answer.id)\
-                    .filter(relational_db.Question.id == relevant_q["question_id"])\
-                    .order_by(relational_db.Response.timestamp.desc())\
+                relevant_response: relational_db.Response = r_db.session.query(relational_db.Response)\
+                    .filter(relational_db.Response.question_id == relevant_q["question_id"])\
                     .first()
+                
+                question = relevant_response.question
+                answer = relevant_response.answer
 
                 context["chat_items"][-1].id = question.id
 
@@ -86,8 +86,8 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
                     
                     # add the new response to the relational database
                     new_response = relational_db.Response(
-                        question=new_question.id,
-                        answer=answer.id
+                        question_id=new_question.id,
+                        answer_id=answer.id
                     )
                     r_db.session.add(new_response)
                     r_db.session.commit()
@@ -96,6 +96,7 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
                 answer_message.id = answer.id
                 answer_message.saved_question = question.question
                 answer_message.message = answer.answer
+                answer_message.sources = [vector_db.query_source_metadata(response_source.source_id) for response_source in relevant_response.sources]
         else:
             # no similar questions (distance >= 0.4)
             force_generate_new = True
@@ -118,10 +119,9 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
             if previous_response:
                 # retrieve previous question
                 question = r_db.session.query(relational_db.Question)\
-                    .join(relational_db.Response, relational_db.Response.question == relational_db.Question.id)\
-                    .filter(relational_db.Question.id == previous_response.question)\
+                    .join(relational_db.Response, relational_db.Response.question_id == relational_db.Question.id)\
+                    .filter(relational_db.Question.id == previous_response.question_id)\
                     .first()
-                pass
             else:
                 # create new question
                 question = relational_db.Question(question=user_input)
@@ -144,15 +144,24 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
             r_db.session.commit()            
 
             # add response to relational database
-            response = relational_db.Response(
-                question=question.id,
-                answer=answer.id
+            new_response = relational_db.Response(
+                question_id=question.id,
+                answer_id=answer.id
             )
 
-            r_db.session.add(response)
+            r_db.session.add(new_response)
             r_db.session.commit()
 
             answer_message.id = answer.id
+
+            # link sources to sources in relational database
+            for source_id in response["relevant_source_ids"]:
+                response_source = relational_db.ResponseSource(
+                    response_id=new_response.id,
+                    source_id=source_id
+                )
+                r_db.session.add(response_source)
+            r_db.session.commit()
 
             
     context["chat_items"].append(answer_message)
@@ -178,8 +187,8 @@ def generate_new_answer(index: int):
     context["chat_items"].append(question)
 
     r_response: relational_db.Response = r_db.session.query(relational_db.Response)\
-        .filter(relational_db.Response.question == question.id)\
-        .filter(relational_db.Response.answer == answer.id)\
+        .filter(relational_db.Response.question_id == question.id)\
+        .filter(relational_db.Response.answer_id == answer.id)\
         .first()
 
     thread = Thread(target=response, args=(question.message,True,r_response))
@@ -195,7 +204,7 @@ def like_answer(index: int):
     answer: message.Answer = context["chat_items"][index]
     response: relational_db.Response = r_db.session.execute(
         sa.select(relational_db.Response)
-            .filter_by(answer=answer.id)
+            .filter_by(answer_id=answer.id)
     ).first()[0]
     response.likes += 1
     r_db.session.commit()
@@ -208,7 +217,7 @@ def dislike_answer(index: int):
     answer: message.Answer = context["chat_items"][index]
     response: relational_db.Response = r_db.session.execute(
         sa.select(relational_db.Response)
-            .filter_by(answer=answer.id)
+            .filter_by(answer_id=answer.id)
     ).first()[0]
     response.dislikes += 1
     r_db.session.commit()
@@ -223,7 +232,7 @@ def suggest_question():
         suggested_question: str = request.form['suggested-question']
         answer_message: message.Answer = context["chat_items"][int(request.form['answer-index'])]
 
-        answer = relational_db.Answer(answer=answer_message.message)
+        answer = relational_db.Answer(answer_id=answer_message.message)
         r_db.session.add(answer)
         r_db.session.commit()
 
@@ -242,8 +251,8 @@ def suggest_question():
             vector_db.add_question(question.id, suggested_question)
 
         response = relational_db.Response(
-            question=question.id,
-            answer=answer.id
+            question_id=question.id,
+            answer_id=answer.id
         )
         r_db.session.add(response)
         r_db.session.commit()

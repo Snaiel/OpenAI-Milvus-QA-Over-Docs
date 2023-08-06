@@ -46,7 +46,7 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> ChatResponse:
     messages = [
         {"role": "system", "content": SYSTEM_INSTRUCTIONS},
         {"role": "system", "content": "CONTEXT: \n\n\n\n"},
-        {"role": "user", "content": f"{question}\n\nPlease remember to respond in JSON shown before"}
+        {"role": "user", "content": f"{question}\n\nPlease remember to respond in JSON shown before and to use '\n' for newlines"}
     ]
 
     base_token_length = get_messages_token_length(messages)
