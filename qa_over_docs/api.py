@@ -1,5 +1,6 @@
 import openai, tiktoken, json
 from typing import List, TypedDict
+from pprint import pprint
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,14 +20,21 @@ Return your response in JSON like this:
     "answer": ...
 }
 
-where relevant_source_ids is a list of {SOURCE ID} of the corresponding source
-you use to answer the user's question and answer is your response to the user's
+where "relevant_source_ids" is a list of {SOURCE ID} of the sources
+relevant to the user's question. "answer" is your response to the user's
 question based on the context. For example:
 
 {
     "relevant_source_ids": ["443350746039594436", "443350746039594128"],
     "answer": "The answer to your question is..."
 }
+'''
+
+USER_REMINDER = '''
+Please remember to respond in JSON shown before and to use '\\n' for newlines.
+Also remember to provide the source ids of all relevant sources. Ensure you
+retrieve back ALL source ids whether the content is relevant to the user's question.
+Thank you.
 '''
 
 
@@ -46,7 +54,7 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> ChatResponse:
     messages = [
         {"role": "system", "content": SYSTEM_INSTRUCTIONS},
         {"role": "system", "content": "CONTEXT: \n\n\n\n"},
-        {"role": "user", "content": f"{question}\n\nPlease remember to respond in JSON shown before and to use '\n' for newlines"}
+        {"role": "user", "content": f"{question}\n\n{USER_REMINDER}"}
     ]
 
     base_token_length = get_messages_token_length(messages)
@@ -64,6 +72,8 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> ChatResponse:
         context = new_context
 
     messages[1]["content"] += context
+
+    pprint(messages)
 
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
