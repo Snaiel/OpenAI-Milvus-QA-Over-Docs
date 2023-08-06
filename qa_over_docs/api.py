@@ -70,11 +70,19 @@ def retrieve_response(question: str, relevant_docs: list[dict]) -> ChatResponse:
         messages=messages
     )
 
-    print(completion.choices[0].message.content.strip())
-
-    response = json.loads(completion.choices[0].message.content.strip())
-    response["relevant_source_ids"] = [int(source_id) for source_id in response["relevant_source_ids"]]
-
+    response_string = completion.choices[0].message.content.strip()
+    print(response_string)
+    
+    response: dict
+    try:
+        response = json.loads(response_string)
+        response["relevant_source_ids"] = [int(source_id) for source_id in response["relevant_source_ids"]]
+    except Exception as e:
+        print(f"{str(e)}\nCouldn't parse model's response as JSON:\n{response_string}")
+        response = {
+            "relevant_source_ids": [],
+            "answer": response_string
+        }
     response: ChatResponse = response
 
     return response
