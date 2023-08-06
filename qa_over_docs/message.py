@@ -40,7 +40,7 @@ class Answer(Message):
         # sort the list based on the 'source' value
         sources: list[dict] = sorted(self.sources, key=lambda x: x["source"])
 
-        # do some sanitising
+        # group duplicate sources together
         for source_metadata in sources:
             source = source_metadata["source"].replace("uploads/", "")
 
@@ -54,15 +54,14 @@ class Answer(Message):
                         output[source] = {"rows_list": [row_num]}
                     else:
                         output[source]["rows_list"].append(row_num)
-                        # output[source]["rows_list"] = sorted(output[source]["rows_list"])
                 if filetype == "pdf":
                     page = source_metadata["page"]
                     if source not in output:
                         output[source] = {"pages_list": [page], "title": source_metadata["Title"], "author": source_metadata["Author"]}
                     else:
                         output[source]["pages_list"].append(page)
-                        # output[source]["pages_list"] = sorted(output[source]["pages_list"])
 
+        # represent the list of rows/pages as a string
         for source, metadata in output.items():
             for key in metadata.keys():
                 if '_list' in key:
