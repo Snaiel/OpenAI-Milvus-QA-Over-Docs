@@ -1,4 +1,4 @@
-from langchain.document_loaders import WebBaseLoader, CSVLoader, PyMuPDFLoader
+from langchain.document_loaders import WebBaseLoader, CSVLoader, PDFPlumberLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 from langchain.vectorstores.milvus import Milvus
@@ -137,7 +137,7 @@ def add_sources(sources: list[str]):
                     csv_file.write(csv_content.strip())
                 loaders.append(CSVLoader(path))
             elif ext == ".pdf":
-                loaders.append(PyMuPDFLoader(path))
+                loaders.append(PDFPlumberLoader(path))
 
     def put_metadata_into_sub_dict(docs: list[Document]) -> list[Document]:
         for doc in docs:
@@ -232,13 +232,19 @@ def query_most_relevant_question(query: str) -> dict:
 
 def query_source_metadata(pk: int) -> dict:
     collection = Collection(DOCUMENTS_STORE_NAME)
+
     metadata = collection.query(
         expr = f"pk in [{pk}]", 
         output_fields = ["metadata", "text"]
     )
-    print(metadata[0])
-    return metadata[0]["metadata"]
 
+    print(metadata)
+
+    if len(metadata) > 0:
+        return metadata[0]["metadata"]
+    else:
+        return {}
+    
 
 def remove_answer(pk: int):
     collection = Collection(QUESTIONS_STORE_NAME)

@@ -65,10 +65,10 @@
                 </div>
             </div>
             <div class="collapse" id="collapseSources-{{ i }}">
-                {% for source in item.sources %}
-                <div class="mt-2 fw-medium">{{ source["source"] }}</div>
+                {% for source, metadata in item.get_sources().items() %}
+                <div class="mt-2 fw-medium">{{ source }}</div>
                 <table class="table text-secondary">
-                    {% for key, value in source.items() %}
+                    {% for key, value in metadata.items() %}
                     {% if key != "source" and value != "" %}
                     <tr>
                         <td> {{ key }}</td>
