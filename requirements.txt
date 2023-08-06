@@ -6,3 +6,5 @@ pymilvus
 python-dotenv
 Flask-SQLAlchemy
 sqlalchemy
+pdfplumber
+beautifulsoup4
