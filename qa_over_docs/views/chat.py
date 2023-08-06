@@ -105,9 +105,14 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
     if force_generate_new:
         answer_message.comment = "new"
         relevant_docs = vector_db.retrieve_relevant_docs(user_input)
-        text_answer = api.retrieve_response(user_input, relevant_docs)
+        response = api.retrieve_response(user_input, relevant_docs)
 
-        answer_message.message = text_answer
+        answer_message.message = response["answer"]
+
+        sources_metadata = []
+        for source_id in response["relevant_source_ids"]:
+            sources_metadata.append(vector_db.query_source_metadata(source_id))
+        answer_message.sources = sources_metadata
 
         with app.app_context():
             if previous_response:
@@ -133,7 +138,7 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
             context["chat_items"][-1].id = question.id
 
             # create new answer
-            answer = relational_db.Answer(answer=text_answer)
+            answer = relational_db.Answer(answer=answer_message.message)
             r_db.session.add(answer)
 
             r_db.session.commit()            

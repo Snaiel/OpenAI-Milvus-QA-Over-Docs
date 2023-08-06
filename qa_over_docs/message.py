@@ -11,8 +11,16 @@ class Question(Message):
         super().__init__(message, id)
 
 class Answer(Message):
-    def __init__(self, message: str = "", id: int = None, saved_question: str = None, comment: str = None) -> None:
+    def __init__(
+            self,
+            message: str = "",
+            sources: list[dict] = [],
+            id: int = None,
+            saved_question: str = None,
+            comment: str = None
+        ) -> None:
         super().__init__(message, id)
+        self.sources = sources # the metadata of sources used to answer the question
         self.saved_question = saved_question # the primary key of the previous question
         self.comment = comment # whether the answer is from a `new`, `similar`, or `identical` question
 

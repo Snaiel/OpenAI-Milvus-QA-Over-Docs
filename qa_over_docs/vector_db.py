@@ -153,6 +153,9 @@ def add_sources(sources: list[str]):
             new_docs = put_metadata_into_sub_dict(new_docs)
             docs.extend(new_docs)
 
+        for i in docs:
+            print(i)
+
         text_splitter = RecursiveCharacterTextSplitter()
         documents = text_splitter.split_documents(docs)
         sources_vector_store.add_documents(documents)
@@ -185,7 +188,7 @@ def retrieve_relevant_docs(query: str) -> list[dict]:
 
     relevant_docs = collection.query(
         expr = f"pk in {results.ids}", 
-        output_fields = ["text"]
+        output_fields = ["pk", "text"]
     )
 
     # Create a dictionary to map pk values to their respective order index
@@ -225,6 +228,16 @@ def query_most_relevant_question(query: str) -> dict:
         relevant_qa["pk"] = results.ids[0]
 
     return relevant_qa
+
+
+def query_source_metadata(pk: int) -> dict:
+    collection = Collection(DOCUMENTS_STORE_NAME)
+    metadata = collection.query(
+        expr = f"pk in [{pk}]", 
+        output_fields = ["metadata", "text"]
+    )
+    print(metadata[0])
+    return metadata[0]["metadata"]
 
 
 def remove_answer(pk: int):
