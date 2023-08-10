@@ -22,18 +22,18 @@ def home():
         user_input = request.form['user_input']
 
         context["chat_items"].append(message.Question(user_input))
+        context["waiting"] = True
 
         thread = Thread(target=response, args=(user_input,))
         thread.start()
-
-        context["waiting"] = True
 
     return render_template("index.html", **context, response_comments=RESPONSE_COMMENTS)
 
 
 def response(user_input: str, force_generate_new: bool = False, previous_response: relational_db.Response  = None):
-    st = time()
-    sleep(0.1)
+    time_start = time()
+
+    context["time_intervals"] = {}
 
     answer_message = message.Answer()
 
@@ -41,6 +41,11 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
         relevant_q = {}
     else:
         relevant_q = vector_db.query_most_relevant_question(user_input)
+
+    time_query_relevant_question = time()
+    if relevant_q:
+        context["time_intervals"]["query for any relevant questions"] = time_query_relevant_question - time_start
+
     # pprint(relevant_qa)
 
     if "distance" in relevant_q:
@@ -56,20 +61,28 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
     else:
         force_generate_new = True
 
+    time_retrieve_relevant_question = time()
+    if not force_generate_new:
+        context["time_intervals"]["retrieve relevant question"] = time_retrieve_relevant_question - time_query_relevant_question
+
+
     if force_generate_new:
         # make a call to the api and generate an answer
         answer_message = generate_answer(answer_message, user_input, previous_response)
+        time_generate_answer = time()
+        context["time_intervals"]["generate answer"] = time_generate_answer - time_retrieve_relevant_question
+
             
     context["chat_items"].append(answer_message)
     context["waiting"] = False
 
-    sleep(0.2)
-    et = time()
+    sleep(0.001)
+    time_end = time()
 
-    response_time = et - st
+    response_time = time_end - time_start
     print(f"Response time: {response_time}")
 
-    context["response_time"] = response_time
+    context["time_intervals"]["total time"] = response_time
     socketio.emit('response_received')
 
 

@@ -28,27 +28,28 @@ context: dict
 if os.path.exists(CONTEXT_FILE):
     with open(CONTEXT_FILE) as file:
         context = json.load(file)
-
-        if os.path.exists(SOURCES_FILE):
-            with open(SOURCES_FILE) as sources_file:
-                # print(list(map(lambda e: e.strip(), sources_file.readlines())))
-                context["sources"] = list(map(lambda e: e.strip(), sources_file.readlines()))
 else:
     context = {
         "chat_items": [],
         "waiting": False,
-        "response_time": None,
+        "time_intervals": {},
         "collection_exists": False,
         "sources_to_add": [],
         "sources": [],
         "processing_sources": False
     }
 
+if os.path.exists(SOURCES_FILE):
+    with open(SOURCES_FILE) as sources_file:
+        # print(list(map(lambda e: e.strip(), sources_file.readlines())))
+        context["sources"] = list(map(lambda e: e.strip(), sources_file.readlines()))
+        context["collection_exists"] = True
+
 def save_context():
     with open(CONTEXT_FILE, 'w' if os.path.exists(CONTEXT_FILE) else 'x') as file:
         new_context = context.copy()
         new_context["chat_items"] = []
-        new_context["response_time"] = None
+        new_context["time_intervals"] = {}
         new_context["waiting"] = False
         json.dump(new_context, file, indent=4)
     with open(SOURCES_FILE, 'w' if os.path.exists(SOURCES_FILE) else 'x') as file:
