@@ -101,13 +101,14 @@ def retrieve_relevant_response(answer_message: message.Answer, user_input: str, 
         question = relevant_response.question
         answer = relevant_response.answer
 
-        context["chat_items"][-1].id = question.id
 
         if distance < 0.1:
             # treat the user's input and the retrieved question as the same
             answer_message.comment = "identical"
             question.count += 1
             r_db.session.commit()
+            # point the question in the chat to the relevant question
+            context["chat_items"][-1].id = question.id
         else:
             # create a new question from the user's input but
             # assign the response to the question to be the
@@ -118,6 +119,9 @@ def retrieve_relevant_response(answer_message: message.Answer, user_input: str, 
             new_question = relational_db.Question(question=user_input)
             r_db.session.add(new_question)
             r_db.session.commit()
+
+            # point the question in the chat to this new question
+            context["chat_items"][-1].id = new_question.id
 
             # add the new question to vector collection
             vector_db.add_question(
