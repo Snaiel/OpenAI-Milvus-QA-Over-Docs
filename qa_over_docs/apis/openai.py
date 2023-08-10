@@ -28,6 +28,7 @@ USER_REMINDER = '''
 Please remember to respond in JSON shown before and to use '\\n' for newlines.
 Also remember to provide the source ids of all relevant sources. Ensure you
 retrieve back ALL source ids whether the content is relevant to the user's question.
+Do not mention the source ids in "answer".
 Thank you.
 '''
 
