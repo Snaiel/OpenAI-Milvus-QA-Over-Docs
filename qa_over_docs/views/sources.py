@@ -94,7 +94,7 @@ def delete_collection():
 
     context["collection_exists"] = False
     context["sources"] = []
-    context["response_time"] = None
+    context["time_intervals"] = {}
     context["chat_items"] = []
 
     flash("Databases successfully deleted", "primary")

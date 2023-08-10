@@ -3,6 +3,7 @@ from threading import Thread
 from time import time, sleep
 from pprint import pprint
 import sqlalchemy as sa
+from sqlalchemy import desc
 
 from qa_over_docs import app, context, socketio, save_context, r_db
 from qa_over_docs import vector_db, relational_db, api, message
@@ -43,7 +44,7 @@ def response(user_input: str, force_generate_new: bool = False, previous_respons
         relevant_q = vector_db.query_most_relevant_question(user_input)
 
     time_query_relevant_question = time()
-    if relevant_q:
+    if not force_generate_new:
         context["time_intervals"]["query for any relevant questions"] = time_query_relevant_question - time_start
 
     # pprint(relevant_qa)
@@ -94,6 +95,7 @@ def retrieve_relevant_response(answer_message: message.Answer, user_input: str, 
         # retrieve previous question and answer from relational database
         relevant_response: relational_db.Response = r_db.session.query(relational_db.Response)\
             .filter(relational_db.Response.question_id == relevant_q["question_id"])\
+            .order_by(desc(relational_db.Response.timestamp))\
             .first()
         
         question = relevant_response.question
