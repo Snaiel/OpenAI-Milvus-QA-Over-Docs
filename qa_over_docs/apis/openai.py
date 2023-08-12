@@ -35,14 +35,17 @@ Thank you.
 MAX_TOKEN_LENGTH = 3700
 
 class OpenAI(BaseAPI):
-    def __init__(self) -> None:
-        super().__init__(SYSTEM_INSTRUCTIONS, USER_REMINDER, MAX_TOKEN_LENGTH)
-
 
     def num_tokens_from_string(self, string: str) -> int:
         encoding = tiktoken.get_encoding("cl100k_base")
         num_tokens = len(encoding.encode(string))
         return num_tokens
+    
+
+    def get_messages_token_length(self, messages: list[dict]):
+        """Returns the total amount of tokens in the messages list"""
+        content = [i["content"] for i in messages]
+        return self.num_tokens_from_string("\n".join(content))
     
 
     def retrieve_response(self, question: str, relevant_docs: list[dict]) -> ChatResponse:
@@ -60,7 +63,7 @@ class OpenAI(BaseAPI):
             new_context = context
             new_context += "\n\n\n" + "{SOURCE ID}: " +  str(doc["pk"]) + "\n" + doc["text"]
 
-            if self.num_tokens_from_string(new_context) > self.max_token_length - base_token_length:
+            if self.num_tokens_from_string(new_context) > MAX_TOKEN_LENGTH - base_token_length:
                 break
 
             context = new_context

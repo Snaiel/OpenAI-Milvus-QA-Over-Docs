@@ -14,9 +14,6 @@ MAX_TOKEN_LENGTH = 1000
 tokenizer = AutoTokenizer.from_pretrained("h2oai/h2ogpt-gm-oasst1-en-2048-falcon-7b-v3")
 
 class HuggingFace(BaseAPI):
-    def __init__(self) -> None:
-        super().__init__(SYSTEM_INSTRUCTIONS, "", MAX_TOKEN_LENGTH)
-
     
     def num_tokens_from_string(self, string: str) -> int:
         encoding = tokenizer(string)
@@ -32,7 +29,7 @@ class HuggingFace(BaseAPI):
             new_context = context
             new_context += "\n\n\n" + "{SOURCE ID}: " +  str(doc["pk"]) + "\n" + doc["text"]
 
-            if self.num_tokens_from_string(new_context) > self.max_token_length - base_token_length:
+            if self.num_tokens_from_string(new_context) > MAX_TOKEN_LENGTH - base_token_length:
                 break
 
             context = new_context
