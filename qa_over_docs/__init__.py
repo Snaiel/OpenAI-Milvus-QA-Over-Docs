@@ -58,8 +58,9 @@ def save_context():
 
 from qa_over_docs.apis.base import BaseAPI
 from qa_over_docs.apis.openai import OpenAI
+from qa_over_docs.apis.huggingface import HuggingFace
 
-api: BaseAPI = OpenAI()
+api: BaseAPI = HuggingFace()
 
 
 from qa_over_docs.views import chat, sources
