@@ -5,9 +5,10 @@ class ChatResponse(TypedDict):
     answer: str
 
 class BaseAPI():
-    def __init__(self, system_instructions, user_reminder) -> None:
+    def __init__(self, system_instructions, user_reminder, max_token_length) -> None:
         self.system_instructions = system_instructions
         self.user_reminder = user_reminder
+        self.max_token_length = max_token_length
 
 
     def num_tokens_from_string(self, string: str) -> int:

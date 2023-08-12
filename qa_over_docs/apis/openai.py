@@ -32,10 +32,11 @@ Do not mention the source ids in "answer".
 Thank you.
 '''
 
+MAX_TOKEN_LENGTH = 3700
 
 class OpenAI(BaseAPI):
     def __init__(self) -> None:
-        super().__init__(SYSTEM_INSTRUCTIONS, USER_REMINDER)
+        super().__init__(SYSTEM_INSTRUCTIONS, USER_REMINDER, MAX_TOKEN_LENGTH)
 
 
     def num_tokens_from_string(self, string: str) -> int:
@@ -52,7 +53,6 @@ class OpenAI(BaseAPI):
         ]
 
         base_token_length = self.get_messages_token_length(messages)
-        max_token_length = 3700
 
         context = ""
 
@@ -60,7 +60,7 @@ class OpenAI(BaseAPI):
             new_context = context
             new_context += "\n\n\n" + "{SOURCE ID}: " +  str(doc["pk"]) + "\n" + doc["text"]
 
-            if self.num_tokens_from_string(new_context) > max_token_length - base_token_length:
+            if self.num_tokens_from_string(new_context) > self.max_token_length - base_token_length:
                 break
 
             context = new_context
