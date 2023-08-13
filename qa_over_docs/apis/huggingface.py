@@ -7,7 +7,14 @@ load_dotenv()
 API_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 API_URL = os.getenv("HUGGINGFACE_ENDPOINT")
 
-SYSTEM_INSTRUCTIONS = "Answer my question based on the provided context:"
+SYSTEM_INSTRUCTIONS = """
+Answer my question using the context below.
+"""
+
+REMINDER = """
+Only respond with information from the context.
+Do not mention anything outside of the provided context.
+"""
 
 MAX_TOKEN_LENGTH = 1000
 
@@ -21,7 +28,7 @@ class HuggingFace(BaseAPI):
     
 
     def retrieve_response(self, question: str, relevant_docs: list[dict]) -> ChatResponse:
-        base_token_length = self.num_tokens_from_string(SYSTEM_INSTRUCTIONS + f"\n\n{question}")
+        base_token_length = self.num_tokens_from_string(SYSTEM_INSTRUCTIONS + f"\n\n{question}" + REMINDER) + 5
 
         context = ""
 
@@ -34,7 +41,7 @@ class HuggingFace(BaseAPI):
 
             context = new_context
 
-        input = "<|prompt|>" + SYSTEM_INSTRUCTIONS + f"\n\nCONTEXT:{context}" + f"\n\n{question}" + "<|endoftext|><|answer|>"
+        input = "<|prompt|>" + SYSTEM_INSTRUCTIONS + f"\n\nCONTEXT:{context}" + f"\n\n\nQUESTION:\n{question}" + f"\n\n{REMINDER}" + "<|endoftext|><|answer|>"
 
         print(input, self.num_tokens_from_string(input))
 
