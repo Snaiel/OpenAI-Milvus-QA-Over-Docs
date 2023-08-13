@@ -1,11 +1,13 @@
+from typing import List
 from qa_over_docs.apis.base import BaseAPI, ChatResponse
+from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 import requests, os
 from transformers import AutoTokenizer
 from dotenv import load_dotenv
 load_dotenv()
 
 API_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
-API_URL = os.getenv("HUGGINGFACE_ENDPOINT")
+API_INFERENCE_URL = os.getenv("HUGGINGFACE_INFERENCE_ENDPOINT")
 
 SYSTEM_INSTRUCTIONS = """
 Answer my question using the context below.
@@ -18,12 +20,14 @@ Do not mention anything outside of the provided context.
 
 MAX_TOKEN_LENGTH = 1000
 
-tokenizer = AutoTokenizer.from_pretrained("h2oai/h2ogpt-gm-oasst1-en-2048-falcon-7b-v3")
 
 class HuggingFace(BaseAPI):
+
+    tokenizer = AutoTokenizer.from_pretrained("h2oai/h2ogpt-gm-oasst1-en-2048-falcon-7b-v3")
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
     def num_tokens_from_string(self, string: str) -> int:
-        encoding = tokenizer(string)
+        encoding = self.tokenizer(string)
         return len(encoding.tokens())
     
 
@@ -55,7 +59,7 @@ class HuggingFace(BaseAPI):
                 "repetition_penalty": 3.2}
         }
 
-        response = requests.post(API_URL, headers=headers, json=payload)
+        response = requests.post(API_INFERENCE_URL, headers=headers, json=payload)
 
         response_string = response.json()[0]["generated_text"]
         
@@ -65,3 +69,11 @@ class HuggingFace(BaseAPI):
         }
 
         return response
+    
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return self.embeddings.embed_documents(texts)
+    
+
+    def embed_query(self, text: str) -> List[float]:
+        return self.embeddings.embed_query(text)

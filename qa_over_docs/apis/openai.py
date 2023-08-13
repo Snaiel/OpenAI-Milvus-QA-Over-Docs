@@ -1,4 +1,6 @@
+from typing import List
 from qa_over_docs.apis.base import BaseAPI, ChatResponse
+from langchain.embeddings.openai import OpenAIEmbeddings
 import openai, tiktoken, json
 from pprint import pprint
 from dotenv import load_dotenv
@@ -35,6 +37,8 @@ Thank you.
 MAX_TOKEN_LENGTH = 3700
 
 class OpenAI(BaseAPI):
+
+    embeddings = OpenAIEmbeddings()
 
     def num_tokens_from_string(self, string: str) -> int:
         encoding = tiktoken.get_encoding("cl100k_base")
@@ -93,3 +97,11 @@ class OpenAI(BaseAPI):
         response: ChatResponse = response
 
         return response
+    
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return self.embeddings.embed_documents(texts)
+    
+
+    def embed_query(self, text: str) -> List[float]:
+        return self.embeddings.embed_query(text)

@@ -2,16 +2,13 @@ from langchain.document_loaders import WebBaseLoader, CSVLoader, PDFPlumberLoade
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 from langchain.vectorstores.milvus import Milvus
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
 import validators, os
-from qa_over_docs import r_db, relational_db
+from qa_over_docs import r_db, api, relational_db
 
 print("retrieving Embeddings model")
 
-embeddings = OpenAIEmbeddings()
-# embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embeddings = api
 
 EMBEDDINGS_DIMENSIONS = len(embeddings.embed_query("query"))
 
