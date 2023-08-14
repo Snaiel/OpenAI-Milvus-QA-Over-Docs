@@ -2,6 +2,7 @@ from typing import List
 from qa_over_docs.apis.base import BaseAPI, ChatResponse
 from langchain.embeddings.openai import OpenAIEmbeddings
 import openai, tiktoken, json
+from time import time
 from pprint import pprint
 from dotenv import load_dotenv
 
@@ -100,7 +101,11 @@ class OpenAI(BaseAPI):
     
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        return self.embeddings.embed_documents(texts)
+        st = time()
+        e = self.embeddings.embed_documents(texts)
+        et = time()
+        print(et - st)
+        return e
     
 
     def embed_query(self, text: str) -> List[float]:

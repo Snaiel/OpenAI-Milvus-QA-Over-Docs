@@ -1,13 +1,18 @@
 from typing import List
 from qa_over_docs.apis.base import BaseAPI, ChatResponse
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 import requests, os
+from time import time
 from transformers import AutoTokenizer
 from dotenv import load_dotenv
 load_dotenv()
 
 API_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 API_INFERENCE_URL = os.getenv("HUGGINGFACE_INFERENCE_ENDPOINT")
+API_EMBEDDINGS_URL = os.getenv("HUGGINGFACE_EMBEDDINGS_ENDPOINT")
+
+HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
 
 SYSTEM_INSTRUCTIONS = """
 Answer my question using the context below.
@@ -24,7 +29,8 @@ MAX_TOKEN_LENGTH = 1000
 class HuggingFace(BaseAPI):
 
     tokenizer = AutoTokenizer.from_pretrained("h2oai/h2ogpt-gm-oasst1-en-2048-falcon-7b-v3")
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = OpenAIEmbeddings()
+    # embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
     def num_tokens_from_string(self, string: str) -> int:
         encoding = self.tokenizer(string)
@@ -49,7 +55,6 @@ class HuggingFace(BaseAPI):
 
         print(input, self.num_tokens_from_string(input))
 
-        headers = {"Authorization": f"Bearer {API_TOKEN}"}
         payload = {
             "inputs": input,
             "parameters": {
@@ -59,7 +64,7 @@ class HuggingFace(BaseAPI):
                 "repetition_penalty": 3.2}
         }
 
-        response = requests.post(API_INFERENCE_URL, headers=headers, json=payload)
+        response = requests.post(API_INFERENCE_URL, headers=HEADERS, json=payload)
 
         response_string = response.json()[0]["generated_text"]
         
